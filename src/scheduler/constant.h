@@ -40,6 +40,17 @@
 extern "C" {
 #endif
 
+#ifdef SIMULATION
+#define pbs_sigjob simulate_sigjob
+#define pbs_holdjob simulate_holdjob
+#define pbs_statjob simulate_statjob
+#define pbs_rlsjob simulate_rlsjob
+#define pbs_rerunjob simulate_rerunjob
+#define pbs_movejob simulate_movejob
+#define pbs_runjob simulate_runjob
+#define pbs_asyrunjob simulate_runjob
+#endif
+
 /* macro to turn a value from enum preempt into it's bit for the bitfield */
 #define PREEMPT_TO_BIT(X) (1 << (X) )
 

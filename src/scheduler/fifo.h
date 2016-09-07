@@ -216,7 +216,7 @@ int main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rer
  *
  *	return success 1 or error 0
  */
-int scheduler_simulation_task(int pbs_sd, int debug);
+
 
 #ifdef	__cplusplus
 }
