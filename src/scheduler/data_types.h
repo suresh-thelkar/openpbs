@@ -1045,6 +1045,9 @@ struct event_list
 	timed_event *events;		/* the calendar of events */
 	timed_event *next_event;	/* the next event to be performed */
 	time_t *current_time;		/* [reference] current time in the calendar */
+	timed_event *next_run_event;	/* points to next occurance of run event */
+	timed_event *next_end_event;	/* points to next occurance of end event */
+
 };
 
 struct timed_event
@@ -1058,6 +1061,8 @@ struct timed_event
 	void *event_func_arg;		/* optional argument to function - not freed */
 	timed_event *next;
 	timed_event *prev;
+	timed_event *next_similar_event; /* points to next occurance of event with same event_type */
+	timed_event *prev_similar_event; /* points to previous occurance of event with same event_type */
 };
 
 #ifdef	__cplusplus

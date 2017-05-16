@@ -1615,7 +1615,7 @@ run_update_resresv(status *policy, int pbs_sd, server_info *sinfo,
 		site_update_on_run(sinfo, qinfo, resresv, ns);
 #endif /* localmod 057 */
 
-		if ((flags & RURR_ADD_END_EVENT)) {
+		if ((flags & RURR_ADD_END_EVENT) && ((policy->backfill_depth != 0) || (qinfo->backfill_depth != UNSPECIFIED))) {
 			te = create_event(TIMED_END_EVENT, rr->end, rr, NULL, NULL);
 			if (te == NULL) {
 				set_schd_error_codes(err, NOT_RUN, SCHD_ERROR);

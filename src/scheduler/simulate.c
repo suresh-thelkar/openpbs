@@ -127,6 +127,7 @@ static const struct policy_change_func_name policy_change_func_name[] =
 	{NULL, NULL}
 };
 
+static void insert_similar_event(timed_event *start, timed_event *te);
 
 /**
  * @brief
@@ -332,7 +333,17 @@ next_event(server_info *sinfo, int advance)
 			}
 		}
 	}
-
+	if (advance && ((te != NULL) && (te->event_type & (TIMED_RUN_EVENT|TIMED_END_EVENT)))) {
+		/* Check if event to be replaced is a RUN/END event and new event replacing it is also
+		 * timed RUN/END event then update next_end_event, next_run_event accordingly
+		 */
+		if ((calendar->next_event != NULL) && (calendar->next_event->event_type == TIMED_END_EVENT))
+			calendar->next_end_event = find_next_similar_event (calendar->next_end_event,
+										IGNORE_DISABLED_EVENTS);
+		else if ((calendar->next_event != NULL) && (calendar->next_event->event_type == TIMED_RUN_EVENT))
+			calendar->next_run_event = find_next_similar_event (calendar->next_run_event,
+										IGNORE_DISABLED_EVENTS);
+	}
 	calendar->next_event = te;
 
 	return te;
@@ -366,9 +377,10 @@ find_init_timed_event(timed_event *event, int ignore_disabled, unsigned int sear
 		return NULL;
 
 	for (e = event; e != NULL; e = e->next) {
-		if (ignore_disabled && e->disabled)
+		/* check for mask first and if it passes then check for the event being disabled or not */
+		if ((e->event_type & search_type_mask) ==0)
 			continue;
-		else if ((e->event_type & search_type_mask) ==0)
+		else if (ignore_disabled && e->disabled)
 			continue;
 		else
 			break;
@@ -618,14 +630,9 @@ exists_run_event(event_list *calendar, time_t end)
 	if (calendar == NULL)
 		return 0;
 
-	te = get_next_event(calendar);
-
-	if (te == NULL) /* no events in our calendar */
-		return 0;
-
-	te = find_init_timed_event(te, IGNORE_DISABLED_EVENTS, TIMED_RUN_EVENT);
-
-	if (te == NULL  ) /* no run event */
+	if (calendar->next_run_event != NULL)
+		te = calendar->next_run_event;
+	else
 		return 0;
 
 	/* there is a run event, but it's after end */
@@ -785,6 +792,10 @@ create_event_list(server_info *sinfo)
 
 	elist->events = create_events(sinfo);
 
+	elist->next_run_event = find_init_timed_event(elist->events, IGNORE_DISABLED_EVENTS, TIMED_RUN_EVENT);
+
+	elist->next_end_event = find_init_timed_event(elist->events, IGNORE_DISABLED_EVENTS, TIMED_END_EVENT);
+
 	elist->next_event = elist->events;
 	elist->current_time = &sinfo->server_time;
 	add_dedtime_events(elist, sinfo->policy);
@@ -810,6 +821,8 @@ create_events(server_info *sinfo)
 	resource_resv **all;
 	int errflag = 0;
 	int i;
+	timed_event *run_event = NULL;
+	timed_event *end_event = NULL;
 
 	/* all_resresv is sorted such that the timed events are in the front of
 	 * the array.  Once the first non-timed event is reached, we're done
@@ -830,6 +843,15 @@ create_events(server_info *sinfo)
 				break;
 			}
 			events = add_timed_event(events, te);
+			if (run_event == NULL) {
+				run_event = te;
+				run_event->next_similar_event = NULL;
+			}
+			else {
+				insert_similar_event(run_event,te);
+				if (te->event_time < run_event->event_time)
+					run_event = te;
+			}
 		}
 
 		te = create_event(TIMED_END_EVENT, all[i]->end, all[i], NULL, NULL);
@@ -838,6 +860,15 @@ create_events(server_info *sinfo)
 			break;
 		}
 		events = add_timed_event(events, te);
+		if (end_event == NULL) {
+			end_event = te;
+			end_event->next_similar_event = NULL;
+		}
+		else {
+			insert_similar_event(end_event,te);
+			if (te->event_time <= end_event->event_time)
+				end_event = te;
+		}
 	}
 
 	/* A malloc error was encountered, free all allocated memory and return */
@@ -870,6 +901,8 @@ new_event_list()
 	elist->events = NULL;
 	elist->next_event = NULL;
 	elist->current_time = NULL;
+	elist->next_run_event = NULL;
+	elist->next_end_event = NULL;
 
 	return elist;
 }
@@ -921,6 +954,10 @@ dup_event_list(event_list *oelist, server_info *nsinfo)
 			return NULL;
 		}
 	}
+	if (oelist->next_run_event != NULL)
+		nelist->next_run_event = dup_timed_event(oelist->next_run_event, nsinfo);
+	if (oelist->next_end_event != NULL)
+		nelist->next_end_event = dup_timed_event(oelist->next_end_event, nsinfo);
 
 	return nelist;
 }
@@ -968,6 +1005,8 @@ new_timed_event()
 	te->event_func_arg = NULL;
 	te->next = NULL;
 	te->prev = NULL;
+	te->next_similar_event = NULL;
+	te->prev_similar_event = NULL;
 
 	return te;
 }
@@ -1150,14 +1189,81 @@ free_timed_event_list(timed_event *te_list)
 }
 
 /**
- * @brief
- * 		add a timed_event to an event list
+ *	insert_similar_event -  Insert events of RUN/END type in their respective event lists.
  *
- * @param[in] calendar - event list
- * @param[in] te       - timed event
+ *	@param[in/out] start  - head of the list where timed_event needs to be added.
+ *	@param[in] te - Timed event that needs to be added.
  *
- * @retval 1 : success
- * @retval 0 : failure
+ *	@return void
+ */
+static void insert_similar_event(timed_event *start, timed_event *te)
+{
+	timed_event *temp = NULL;
+	for (temp = start; temp != NULL;) {
+		if (temp->event_type == te->event_type) {
+			if (te->event_time < temp->event_time)
+			{
+				if (temp->prev_similar_event != NULL) {
+					temp->prev_similar_event->next_similar_event = te;
+					te->prev_similar_event = temp->prev_similar_event;
+					te->next_similar_event = temp;
+					temp->prev_similar_event = te;
+					return;
+				}
+				else {
+					te->prev_similar_event = NULL;
+					te->next_similar_event = temp;
+					temp->prev_similar_event = te;
+					return;
+				}
+			}
+			else if (te->event_time > temp->event_time) {
+				if (temp->next_similar_event != NULL)
+					temp = temp->next_similar_event;
+				else {
+					temp->next_similar_event = te;
+					te->prev_similar_event = temp;
+					return;
+				}
+			}
+			else {
+				/* we place END events at the begining itself */
+				if (te->event_type == TIMED_END_EVENT) {
+					if (temp->prev_similar_event != NULL) {
+						temp->prev_similar_event->next_similar_event = te;
+						te->prev_similar_event = temp->prev_similar_event;
+						te->next_similar_event = temp;
+						temp->prev_similar_event = te;
+						return;
+					}
+					else {
+						te->prev_similar_event = NULL;
+						te->next_similar_event = temp;
+						temp->prev_similar_event = te;
+						return;
+					}
+				}
+				else
+					temp = temp->next_similar_event;
+			}
+
+		}
+		else
+			temp = temp->next;
+	}
+	te->next_similar_event = te->prev_similar_event = NULL;
+	return;
+}
+
+/**
+ *
+ *	@brief add a timed_event to an event list
+ *
+ *	  @param[in] calendar - event list
+ *	  @param[in] te       - timed event
+ *
+ *	@retval 1 success
+ *	@retval 0 failure
  *
  */
 int
@@ -1171,15 +1277,54 @@ add_event(event_list *calendar, timed_event *te)
 
 	current_time = *calendar->current_time;
 
-	if (calendar->events == NULL)
+	/* If calendar is empty then just add this new event and return */
+	if (calendar->events == NULL) {
 		events_is_null = 1;
+		te->next = NULL;
+		te->prev = NULL;
+		calendar->events = te;
+		calendar->next_event = te;
+		if (te->event_type == TIMED_RUN_EVENT)
+			calendar->next_run_event = te;
+		else if (te->event_type == TIMED_END_EVENT)
+			calendar->next_end_event = te;
+		return 1;
+	}
 
 	calendar->events = add_timed_event(calendar->events, te);
+	/* for TIMED_END_EVENTS we add the events right in the front so we check for "<=" in this TIMED_END_EVENT case
+	 * but for run events we append it at the end so there we only check for "<"
+	 */
+	if (te->event_type == TIMED_END_EVENT) {
+		if (calendar->next_end_event == NULL) {
+			calendar->next_end_event = te;
+			te->next_similar_event = te->prev_similar_event = NULL;
+		}
+		else if (te-> event_time <= calendar->next_end_event->event_time) {
+			te->next_similar_event = calendar->next_end_event;
+			calendar->next_end_event = te;
+			te->prev_similar_event = NULL;
+		}
+		else {
+			insert_similar_event(calendar->next_end_event, te);
+		}
+	}
+	else if (te->event_type == TIMED_RUN_EVENT) {
+		if (calendar->next_run_event == NULL) {
+			calendar->next_run_event = te;
+			te->next_similar_event = te->prev_similar_event = NULL;
+		}
+		else if (te->event_time < calendar->next_run_event->event_time) {
+			te->next_similar_event = calendar->next_run_event;
+			calendar->next_run_event = te;
+			te->prev_similar_event = NULL;
+		}
+		else {
+			insert_similar_event(calendar->next_run_event, te);
+		}
+	}
 
-	/* empty event list - the new event is the only event */
-	if (events_is_null)
-		calendar->next_event = te;
-	else if (calendar->next_event != NULL) {
+	if (calendar->next_event != NULL) {
 		/* check if we're adding an event between now and our current event.
 		 * If so, it becomes our new current event
 		 */
@@ -1187,9 +1332,16 @@ add_event(event_list *calendar, timed_event *te)
 			if (te->event_time < calendar->next_event->event_time)
 				calendar->next_event = te;
 			else if (te->event_time == calendar->next_event->event_time) {
-				calendar->next_event =
-					find_timed_event(calendar->events, NULL,
-					TIMED_NOEVENT, te->event_time);
+				/* If event_time is same as next_event's event_time then there is
+				 * high likelihood that te is added as the first event (TIMED_END_EVENT).
+				 * If this is the case then next_event is te.
+				 */
+				if (calendar->events == te)
+					calendar->next_event = te->next;
+				else
+					calendar->next_event =
+						find_timed_event(calendar->events, NULL,
+						TIMED_NOEVENT, te->event_time);
 			}
 		}
 	}
@@ -1227,9 +1379,6 @@ add_timed_event(timed_event *events, timed_event *te)
 
 	if (te == NULL)
 		return events;
-
-	if (events == NULL)
-		return te;
 
 	for (eloop = events; eloop != NULL; eloop = eloop->next) {
 		if (eloop->event_time > te->event_time)
@@ -1288,6 +1437,18 @@ delete_event(server_info *sinfo, timed_event *e, unsigned int flags)
 
 	/* found our event to delete */
 	if (cur_e != NULL) {
+		if (cur_e->event_type == TIMED_RUN_EVENT && calendar->next_run_event == cur_e) {
+			calendar->next_run_event = cur_e->next_similar_event;
+		}
+		else if (cur_e->event_type == TIMED_END_EVENT && calendar->next_end_event == cur_e) {
+			calendar->next_end_event = cur_e->next_similar_event;
+		}
+		if (cur_e->prev_similar_event != NULL) {
+			cur_e->prev_similar_event->next_similar_event = cur_e->next_similar_event;
+		}
+		if (cur_e->next_similar_event != NULL) {
+			cur_e->next_similar_event->prev_similar_event = cur_e->prev_similar_event;
+		}
 		if (calendar->next_event == cur_e)
 			calendar->next_event = cur_e->next;
 
@@ -1337,6 +1498,7 @@ create_event(enum timed_event_types event_type,
 	te->event_ptr = event_ptr;
 	te->event_func = event_func;
 	te->event_func_arg = event_func_arg;
+	te->next_similar_event = te->prev_similar_event = NULL;
 
 	if (determine_event_name(te) == 0) {
 		free_timed_event(te);
@@ -1479,16 +1641,38 @@ add_dedtime_events(event_list *elist, status *policy)
 }
 
 /**
- * @brief
- * 		simulate the minimum amount of a resource list
- *		for an event list until a point in time.  The
- *		comparison we are simulating the minimum for is
- *		(resources_available.foo - resources_assigned.foo)
- *		The minimum is simulated by holding resources_available
- *		constant and maximizing the resources_assigned value
+ *	find_next_similar_event - Function that finds the next occurance of an event which
+ *			    has same event_type as specified in the provided timed_event node.
+ *	@param[in] event - timed_event node whose next similar event needs to be searched.
+ *	@param[in] ignore_disabled - flag to check if we need to ignore disabled events while searching.
  *
- * @note
- * 		This function only simulates START and END events.  If at some
+ *	@return timed_event*
+ *	@retval timed_event pointer or NULL
+ */
+timed_event* find_next_similar_event(timed_event *event, int ignore_disabled)
+{
+	timed_event *temp = NULL;
+	if (event == NULL)
+		return NULL;
+
+	for (temp = event->next_similar_event; temp != NULL; temp = temp->next_similar_event) {
+		if (ignore_disabled && temp->disabled)
+			continue;
+		return temp;
+	}
+	return NULL;
+}
+
+/**
+ *
+ *	@brief simulate the minimum amount of a resource list
+ *		  for an event list until a point in time.  The
+ *		  comparison we are simulating the minimum for is
+ *		  (resources_available.foo - resources_assigned.foo)
+ *		  The minimum is simulated by holding resources_available
+ *		  constant and maximizing the resources_assigned value
+ *
+ *	  @note This function only simulates START and END events.  If at some
  *		point in the future we start simulating events such as
  *		qmgr -c 's s resources_available.ncpus + =5' this function will
  *		will have to be revisited.
@@ -1804,6 +1988,11 @@ generic_sim(event_list *calendar, unsigned int event_mask, time_t end, int defau
 	 * We need to make sure the initial event is of the correct type.
 	 */
 	te = get_next_event(calendar);
+
+	if (calendar->next_run_event == NULL && event_mask == TIMED_RUN_EVENT)
+		return default_ret;
+	else if (calendar->next_end_event == NULL && event_mask == TIMED_END_EVENT)
+		return default_ret;
 
 	for (te = find_init_timed_event(te, IGNORE_DISABLED_EVENTS, event_mask);
 		te != NULL && rc == 0 && (end == 0 || te->event_time < end);

@@ -81,6 +81,13 @@ timed_event *get_next_event(event_list *elist);
  *		   for all events types
  */
 timed_event *find_init_timed_event(timed_event *event, int ignore_disabled, unsigned int search_type_mask);
+
+/*
+ *	Function that finds the next occurance of an event which
+ *	has same event_type as specified in the provided timed_event node.
+ */
+timed_event* find_next_similar_event(timed_event *event, int ignore_disabled);
+
 /*
  *
  *	find_next_timed_event - find the next event based on a timed_event
