@@ -130,6 +130,7 @@ extern int apply_select_inchunk_rules(resource *, attribute *, void *, int, int)
 extern int svr_create_tmp_jobscript(job *, char *);
 extern void unset_jobscript_max_size(void);
 extern char *svr_load_jobscript(job *);
+extern int set_sched_port(attribute *, void *, int);
 
 #ifdef	_PROVISION_H
 extern int find_prov_vnode_list(job *pjob, exec_vnode_listtype *prov_vnodes, char **aoe_name);

@@ -275,6 +275,8 @@ extern "C" {
 
 #define PBSE_JOB_MOVED	15210		/* Job moved to another server */
 
+#define ERROR_BUF_SIZE 4096
+
 
 /* the following structure is used to tie error number      */
 /* with text to be returned to a client, see svr_messages.c */

@@ -7195,3 +7195,15 @@ action_opt_bf_fuzzy(attribute *pattr, void *pobj, int actmode)
 
 	return PBSE_NONE;
 }
+/**
+ * @brief
+ * 		set_sched_port returns 0 if actmode is 1, otherwise PBSE_ATTRRO
+ */
+int
+set_sched_port(attribute *pattr, void *pobj, int actmode)
+{
+	if (actmode == 1)
+		return 0;
+	else
+		return PBSE_ATTRRO;
+}

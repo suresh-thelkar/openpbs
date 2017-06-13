@@ -81,7 +81,10 @@
 #include "batch_request.h"
 #include "pbs_share.h"
 
+#define drwxrxo	(S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP)
+
 static long ecl_pbs_max_licenses = PBS_MAX_LICENSING_LICENSES;
+
 
 /**
  * @brief
@@ -345,6 +348,63 @@ verify_value_path(int batch_request, int parent_object, int cmd,
 	/* replace with prepared path */
 	free(pattr->value);
 	pattr->value = path_out;
+	return PBSE_NONE;
+}
+
+/**
+ * @brief
+ *	verify function for the scheduler attributes ATTR_sched_priv, ATTR_sched_log etc
+ *
+ * @par Functionality
+ *	verifies if the given input is indeed a directory
+ *      validates its permissions
+ *
+ * @see
+ *
+ * @param[in]	batch_request	-	Batch Request Type
+ * @param[in]	parent_object	-	Parent Object Type
+ * @param[in]	cmd		-	Command Type
+ * @param[in]	pattr		-	address of attribute to verify
+ * @param[out]	err_msg		-	error message list
+ *
+ * @return	int
+ * @retval	0 	- 	Attribute passed verification
+ * @retval	>0 	- 	Failed verification - pbs errcode is returned
+ *
+ * @par	Side effects:
+ * 	None
+ *
+ * @par Reentrancy
+ *	MT-safe
+ */
+int
+verify_sched_dirs_value_path(int batch_request, int parent_object, int cmd,
+	struct attropl *pattr, char **err_msg)
+{
+	struct stat stb;
+
+	*err_msg = malloc(ERROR_BUF_SIZE);
+	if (*err_msg == NULL)
+		return PBSE_SYSTEM;
+
+	if ((pattr->value == NULL) || (pattr->value[0] == '\0'))
+		return PBSE_BADATVAL;
+
+	if (!stat(pattr->value, &stb)) {
+		if (!S_ISDIR(stb.st_mode)) {
+			sprintf(*err_msg, "%s directory does not exist\n", pattr->value);
+			return PBSE_BADATVAL;
+		}
+	}
+	else {
+		return PBSE_BADATVAL;
+	}
+
+	if ((stb.st_mode & drwxrxo) != drwxrxo) {
+		sprintf(*err_msg, "%s permission must be 0750\n", pattr->value);
+		return PBSE_PERM;
+	}
+
 	return PBSE_NONE;
 }
 

@@ -312,7 +312,12 @@ extern "C" {
 #define ATTR_job_sort_formula_threshold "job_sort_formula_threshold"
 #define ATTR_throughput_mode "throughput_mode"
 #define ATTR_opt_backfill_fuzzy "opt_backfill_fuzzy"
-
+#define ATTR_sched_port "sched_port"
+#define ATTR_partition "partition"
+#define ATTR_sched_priv "sched_priv"
+#define ATTR_sched_log "sched_log"
+#define ATTR_sched_user "sched_user"
+#define ATTR_sched_comment "comment"
 
 /* additional node "attributes" names */
 

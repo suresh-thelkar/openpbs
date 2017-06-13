@@ -196,6 +196,14 @@ enum sched_atr {
 	SCHED_ATR_job_sort_formula_threshold,
 	SCHED_ATR_throughput_mode,
 	SCHED_ATR_opt_backfill_fuzzy,
+	SCHED_ATR_sched_port,
+	SCHED_ATR_partition,
+	SCHED_ATR_sched_priv,
+	SCHED_ATR_sched_log,
+	SCHED_ATR_scheduling,
+	SCHED_ATR_schedit,
+	SCHED_ATR_sched_user,
+	SCHED_ATR_sched_comment,
 #include "site_sched_attr_enum.h"
 	/* This must be last */
 	SCHED_ATR_LAST

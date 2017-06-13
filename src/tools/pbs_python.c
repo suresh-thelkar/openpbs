@@ -328,6 +328,12 @@ int	   actmode;
 }
 
 int
+set_sched_port(attribute *pattr, void *pobj, int actmode)
+{
+	return 0;
+}
+
+int
 set_reserve_retry_init(pattr, pobj, actmode)
 attribute *pattr;
 void      *pobj;
