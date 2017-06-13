@@ -366,7 +366,7 @@ svr_migrate_data_from_fs(void)
 		return (-1);
 	}
 
-	if (sched_save_db(&scheduler, SVR_SAVE_NEW) != 0) {
+	if (sched_save_db(dflt_scheduler, SVR_SAVE_NEW) != 0) {
 		fprintf(stderr, "Could not save scheduler db\n");
 		if (svr_db_conn->conn_db_err)
 			fprintf(stderr, "[%s]\n", (char*)svr_db_conn->conn_db_err);

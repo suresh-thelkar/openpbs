@@ -81,7 +81,10 @@
 #include "batch_request.h"
 #include "pbs_share.h"
 
+#define drwxrxo	(S_IFDIR | S_IRWXU | S_IRGRP | S_IXGRP)
+
 static long ecl_pbs_max_licenses = PBS_MAX_LICENSING_LICENSES;
+
 
 /**
  * @brief

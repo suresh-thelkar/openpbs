@@ -221,7 +221,7 @@ query_server(status *pol, int pbs_sd)
 	}
 
 
-	if ((sched = pbs_statsched(pbs_sd, NULL, NULL)) == NULL) {
+	if ((sched = pbs_statsched(pbs_sd, "1", NULL, NULL)) == NULL) {
 		errmsg = pbs_geterrmsg(pbs_sd);
 		if (errmsg == NULL)
 			errmsg = "";

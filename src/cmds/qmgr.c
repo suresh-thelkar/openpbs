@@ -2004,8 +2004,13 @@ display(int otype, int ptype, char *oname, struct batch_status *status,
 				printf("Server %s\n", status->name);
 		}
 		else if (otype == MGR_OBJ_SCHED) {
-			if (!format)
-				printf("Sched %s\n", status->name);
+			if (format) {
+					printf("#\n# Create and define scheduler %s\n#\n", status->name);
+					printf("create sched %s\n", status->name);
+				}
+				else
+					printf("Scheduler %s\n", status->name);
+
 		}
 		else if (otype == MGR_OBJ_QUEUE) {
 			/* When printing server, skip display of reservation queue. This is done
@@ -2628,7 +2633,7 @@ execute(int aopt, int oper, int type, char *names, struct attropl *attribs)
 						ss = pbs_statvnode(sp->s_connect, pname->obj_name, sa, NULL);
 						break;
 					case MGR_OBJ_SCHED:
-						ss = pbs_statsched(sp->s_connect, sa, NULL);
+						ss = pbs_statsched(sp->s_connect, pname->obj_name, sa, NULL);
 						break;
 					case MGR_OBJ_SITE_HOOK:
 						ss = pbs_stathook(sp->s_connect, pname->obj_name, sa, SITE_HOOK);
@@ -2687,7 +2692,7 @@ execute(int aopt, int oper, int type, char *names, struct attropl *attribs)
 						ss = pbs_statvnode(sp->s_connect, pname->obj_name, sa, NULL);
 						break;
 					case MGR_OBJ_SCHED:
-						ss = pbs_statsched(sp->s_connect, sa, NULL);
+						ss = pbs_statsched(sp->s_connect, pname->obj_name, sa, NULL);
 						break;
 					case MGR_OBJ_SITE_HOOK:
 						ss = pbs_stathook(sp->s_connect, pname->obj_name, sa, SITE_HOOK);
@@ -3034,7 +3039,7 @@ commalist2objname(char *names, int type)
 			else {
 				len = foreptr - backptr;
 
-				if ((type == MGR_OBJ_SERVER || type == MGR_OBJ_SCHED || type == MGR_OBJ_SITE_HOOK || type == MGR_OBJ_PBS_HOOK) && !strcmp(backptr, DEFAULT_SERVER)) {
+				if ((type == MGR_OBJ_SERVER || type == MGR_OBJ_SITE_HOOK || type == MGR_OBJ_PBS_HOOK) && !strcmp(backptr, DEFAULT_SERVER)) {
 					Mstring(cur_obj->obj_name, 1);
 					cur_obj->obj_name[0] = '\0';
 				}
@@ -3044,7 +3049,7 @@ commalist2objname(char *names, int type)
 					cur_obj->obj_name[len] = '\0';
 				}
 
-				if (type == MGR_OBJ_SERVER || type == MGR_OBJ_SCHED)
+				if (type == MGR_OBJ_SERVER)
 					cur_obj->svr_name = cur_obj->obj_name;
 
 				if (!EOL(*foreptr))
