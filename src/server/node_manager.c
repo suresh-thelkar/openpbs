@@ -1949,9 +1949,9 @@ find_degraded_occurrence(resc_resv *presv, struct pbsnode *np,
 		if (find_vnode_in_execvnode(execvnodes_seq[i], np->nd_name)) {
 			occr_found = 1;
 			if (degraded_op == Set_Degraded_Time) {
-				/* we keep track of the occurrence time to determine the earliest
-				 * degraded time */
-				occr_time = get_occurrence(rrule, dtstart, tz, j);
+		/* we keep track of the occurrence time to determine the earliest
+		 * degraded time */
+		occr_time = get_occurrence(rrule, dtstart, tz, j);
 
 				/* Set the degraded start time to the earliest occurrence
 				 * with unavailable nodes. We do not check for
@@ -2078,6 +2078,7 @@ void
 set_resv_retry(resc_resv *presv, long retry_time)
 {
 	struct work_task *pwt;
+	extern void resv_retry_handler(struct work_task *ptask);
 
 	if (presv == NULL)
 		return;
@@ -2967,6 +2968,7 @@ deallocate_job(mominfo_t *pmom, job *pjob)
 	char	*new_exec_vnode = NULL;
 	attribute deallocated_attr;
 	char	*jobid;
+	pbs_sched *psched;
 
 	if ((pmom == NULL) || (pjob == NULL)) {
 		return;
@@ -3033,7 +3035,12 @@ deallocate_job(mominfo_t *pmom, job *pjob)
 		free(new_exec_vnode);
 
 	}
-	set_scheduler_flag(SCH_SCHEDULE_TERM);
+	if (find_assoc_sched_pj(pjob, &psched))
+		set_scheduler_flag(SCH_SCHEDULE_TERM, psched);
+	else {
+		sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
+		log_err(-1, __func__, log_buffer);
+	}
 	free(freed_vnode_list);
 }
 /**
@@ -3956,7 +3963,7 @@ update2_to_vnode(vnal_t *pvnal, int new, mominfo_t *pmom, int *madenew, int from
 				}
 				if (strcmp(psrp->vna_val, "1") == 0) {
 
-					set_scheduler_flag(SCH_SCHEDULE_RESTART_CYCLE);
+					set_scheduler_flag(SCH_SCHEDULE_RESTART_CYCLE, dflt_scheduler);
 					snprintf(log_buffer,
 					   sizeof(log_buffer),
 					   "hook '%s' requested for "
@@ -5076,7 +5083,7 @@ found:
 
 		case IS_RESCUSED:
 		case IS_RESCUSED_FROM_HOOK:
-#ifdef DEBUG
+#ifdef  DEBUG
 			if (command == IS_RESCUSED)
 				DBPRT(("%s: IS_RESCUSED\n", __func__))
 				else
@@ -5269,7 +5276,7 @@ found:
 			}
 			free(hook_euser);
 			hook_euser = NULL;
-			set_scheduler_flag(SCH_SCHEDULE_RESTART_CYCLE);
+			set_scheduler_flag(SCH_SCHEDULE_RESTART_CYCLE, dflt_scheduler);
 			log_event(PBSEVENT_DEBUG2, PBS_EVENTCLASS_NODE,
 				LOG_INFO, pmom->mi_host,
 				"requested for scheduler to restart cycle");
@@ -8660,6 +8667,7 @@ free_sister_vnodes(job *pjob, char *vnodelist, char *err_msg,
 			int err_msg_sz, struct batch_request *reply_req)
 {
 	int		rc = 0;
+	pbs_sched	*psched;
 
 	if (pjob == NULL) {
 		log_err(PBSE_INTERNAL, __func__, "bad pjob parameter");
@@ -8686,7 +8694,12 @@ free_sister_vnodes(job *pjob, char *vnodelist, char *err_msg,
 	/* increment everything found in new exec_vnode */
 	set_resc_assigned((void *)pjob, 0,  INCR);
 						
-	set_scheduler_flag(SCH_SCHEDULE_TERM);
+	if (find_assoc_sched_pj(pjob, &psched))
+		set_scheduler_flag(SCH_SCHEDULE_TERM, psched);
+	else {
+		sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
+		log_err(-1, __func__, log_buffer);
+	}
 	rc = send_job_exec_update_to_mom(pjob, err_msg, err_msg_sz, reply_req);
 
 	if (rc == 0) {
