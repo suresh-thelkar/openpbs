@@ -10811,7 +10811,7 @@ class Scheduler(PBSService):
         if validate:
             self.signal('-HUP')
             try:
-                self.log_match("Error reading line", n=10,
+                self.log_match("Error reading line", n=10, max_attempts=1,
                                starttime=reconfig_time, existence=False)
             except PtlLogMatchError:
                 _msg = 'Error in validating sched_config changes'
@@ -10921,7 +10921,8 @@ class Scheduler(PBSService):
                             SCHED,
                             id="@default")
         self.server.manager(MGR_CMD_LIST, SCHED)
-        ignore_attrs = ['id', 'pbs_version', 'sched_host', 'state']
+        ignore_attrs = ['id', 'pbs_version', 'sched_host', 'state',
+                        'sched_port']
         unsetattrs = []
         for k in self.attributes.keys():
             if k not in ignore_attrs:
