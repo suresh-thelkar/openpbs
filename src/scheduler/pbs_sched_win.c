@@ -124,7 +124,8 @@
 #include	"net_connect.h"
 #include	"rm.h"
 #include	"rpp.h"
-#include 	"pbs_internal.h"
+#include	"pbs_internal.h"
+#include	"pbs_share.h"
 
 
 struct		connect_handle connection[NCONNECTS];
@@ -236,6 +237,8 @@ die(int sig)
 	}
 
 	log_close(1);
+	if (connector > 0)
+		update_svr_sched_state(SC_DOWN);
 	exit(1);
 }
 
@@ -690,53 +693,96 @@ server_command(char **jid)
  */
 static	char scheduler_name[PBS_MAXHOSTNAME+1] = "Me";  /*arbitrary string*/
 
-static void
-update_svr_schedobj(int cmd, int alarm_time)
+/**
+ * @brief
+ *	Updates a set of attribute values of scheduler to the server and also does a status of this scheduler
+ *	on server and fetches the updates of its attributes.
+ *
+ * @param[in] connector - socket descriptor to server
+ * @param[in] cmd     - scheduler command
+ * @param[in] alarm_time  - value to be updated for scheduler cycle length.
+ *
+ *
+ * @retval Error code
+ * @return -1 - Failure
+ * @return  0 - Success
+ *
+ * @par Side Effects:
+ *	None
+ *
+ *
+ */
+int
+update_svr_schedobj(int connector, int cmd, int alarm_time)
 {
-	static	char    id[] = "update_svr_schedobj";
 	char timestr[128];
-
-	/*same host:port with a new scheduler*/
+	char port_str[MAX_INT_LEN];
 	static	int svr_knows_me = 0;
-
 	int	err;
 	struct	attropl	*attribs, *patt;
+	struct batch_status *ss = NULL;
 
-	if (!(cmd == SCH_SCHEDULE_NULL  ||
-		cmd == SCH_SCHEDULE_FIRST ||
-		svr_knows_me == 0))
-		return;
+	/* This command is only sent on restart of the server */
+	if (cmd != 0 && cmd == SCH_SCHEDULE_FIRST)
+		svr_knows_me = 0;
 
-	attribs = (struct  attropl *)calloc(3, sizeof(struct attropl));
+	if (cmd !=0 && svr_knows_me || cmd == SCH_ERROR || connector < 0)
+		return 0;
+
+	/* Stat the scheduler to get details of sched */
+	ss = pbs_statsched(connector, sc_name, NULL, NULL);
+	if (ss == NULL) {
+		sprintf(log_buffer, "can't fetch the scheduler attributes from server");
+		log_err(-1, __func__, log_buffer);
+		return 1;
+	}
+	sched_settings_frm_svr(ss);
+
+	if (log_dir == NULL || priv_dir == NULL || partitions = NULL) {
+		sprintf(log_buffer, "scheduler should contain at least single partition");
+		log_err(-1, __func__, log_buffer);
+		return 1;
+	}
+
+	pbs_statfree(ss);
+
+	/* update the sched with new values */
+	attribs = (struct  attropl *)calloc(4, sizeof(struct attropl));
 	if (attribs == NULL) {
 		sprintf(log_buffer, "can't update scheduler attribs, calloc failed");
-		log_err(-1, id, log_buffer);
-		return;
+		log_err(-1, __func__, log_buffer);
+		return 1;
 	}
 	patt = attribs;
 	patt->name = ATTR_SchedHost;
 	patt->value = scheduler_name;
 	patt->next = patt + 1;
 	patt++;
+	patt->name = ATTR_sched_port;
+	snprintf(port_str, MAX_INT_LEN, "%d", sched_port);
+	patt->value = port_str;
+	patt->next = patt + 1;
+	patt++;
 	patt->name = ATTR_version;
 	patt->value = pbs_version;
-	patt->next = NULL;
 	if (alarm_time) {
 		patt->next = patt + 1;
 		patt++;
 		patt->name = ATTR_sched_cycle_len;
 		snprintf(timestr, sizeof(timestr), "%d", alarm_time);
 		patt->value = timestr;
-		patt->next = NULL;
 	}
+	patt->next = NULL;
 
 	err = pbs_manager(connector,
 		MGR_CMD_SET, MGR_OBJ_SCHED,
-		"scheduler", attribs, NULL);
+		sc_name, attribs, NULL);
 	if (err == 0 && svr_knows_me == 0)
 		svr_knows_me = 1;
 
 	free(attribs);
+
+	return 0;
 }
 
 #ifdef WIN32
@@ -1591,8 +1637,11 @@ main(int argc, char *argv[])
 		cmd = server_command(&runjobid);
 
 		/*based on cmd: send|not scheduler's PBS version to server*/
-		update_svr_schedobj(cmd, alarm_time);
-
+		if (update_svr_schedobj(cmd, alarm_time)) {
+			sprintf(log_buffer, "update_svr_schedobj failed");
+			log_err(-1, __func__, log_buffer);
+			return -1;
+		}
 
 #ifndef WIN32
 		if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
