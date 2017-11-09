@@ -487,7 +487,7 @@ svr_enquejob(job *pjob)
 			if (find_assoc_sched_pj(pjob, &psched))
 				set_scheduler_flag(SCH_SCHEDULE_NEW, psched);
 			else {
-				sprintf(log_buffer, "No scheduler associated with the job %s", pjob->ji_qs.ji_jobid);
+				sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
 				log_err(-1, __func__, log_buffer);
 			}
 		} else if (server.sv_attr[SRV_ATR_EligibleTimeEnable].at_val.at_long &&
@@ -498,7 +498,7 @@ svr_enquejob(job *pjob)
 			if (find_assoc_sched_pj(pjob, &psched))
 				set_scheduler_flag(SCH_SCHEDULE_MVLOCAL, psched);
 			else {
-				sprintf(log_buffer, "No scheduler associated with the job %s", pjob->ji_qs.ji_jobid);
+				sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
 				log_err(-1, __func__, log_buffer);
 			}
 		}
@@ -668,7 +668,7 @@ svr_setjobstate(job *pjob, int newstate, int newsubstate)
 					if (find_assoc_sched_pj(pjob, &psched))
 						set_scheduler_flag(SCH_SCHEDULE_NEW, psched);
 					else {
-						sprintf(log_buffer, "No scheduler associated with the job %s", pjob->ji_qs.ji_jobid);
+						sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
 						log_err(-1, __func__, log_buffer);
 					}
 

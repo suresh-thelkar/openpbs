@@ -2472,18 +2472,18 @@ sched_settings_frm_svr(struct batch_status *status)
 					sc_name, attribs, NULL);
 				free(attribs);
 				if (err) {
-					sprintf(log_buffer, "Failed in updating log_dir value %s to the server", log_dir);
+					sprintf(log_buffer, "Failed to update log_dir value %s at the server", log_dir);
 					log_err(-1, __func__, log_buffer);
 				}
 				/* switch back to the existing logs directory */
 				(void)snprintf(path_log,  MAXPATHLEN, log_dir);
 				if (log_open(logfile, path_log)) {
-					sprintf(log_buffer, "Failed in opening the log file in dir %s", log_dir);
+					sprintf(log_buffer, "Failed to open the log file in dir %s", log_dir);
 					log_err(-1, __func__, log_buffer);
 					return;
 				}
-				sprintf(log_buffer, "%s: logfile could not be opened under the directory %s", logfile, tmp_log_dir);
-				sprintf(log_buffer, "switching back to the previous existing directory %s", log_dir);
+				sprintf(log_buffer, "%s: logfile could not be opened under directory %s", logfile, tmp_log_dir);
+				sprintf(log_buffer, "switching back to previous directory %s", log_dir);
 				log_err(-1, __func__, log_buffer);
 			} else {
 				free(log_dir);
@@ -2500,24 +2500,24 @@ sched_settings_frm_svr(struct batch_status *status)
 				c  = chk_file_sec(log_buffer, 1, 0, S_IWGRP|S_IWOTH, 1);
 				c |= chk_file_sec(pbs_conf.pbs_environment, 0, 0, S_IWGRP|S_IWOTH, 0);
 				if (c != 0) {
-					sprintf(log_buffer, "PBS validation checks for the directory %s are not passed", tmp_priv_dir);
-					sprintf(log_buffer, "switching back to the previous existing directory %s", priv_dir);
+					sprintf(log_buffer, "PBS failed validation checks for directory %s", tmp_priv_dir);
+					sprintf(log_buffer, "switching back to previous directory %s", priv_dir);
 					log_err(-1, __func__, log_buffer);
 					priv_dir_update_fail = 1;
 				}
 			#endif  /* not DEBUG and not NO_SECURITY_CHECK */
 			if (c == 0) {
 				if (chdir(log_buffer) == -1) {
-					sprintf(log_buffer, "PBS validation checks for the directory %s are not passed", tmp_priv_dir);
-					sprintf(log_buffer, "switching back to the previous existing directory %s", priv_dir);
+					sprintf(log_buffer, "PBS failed validation checks for directory %s", tmp_priv_dir);
+					sprintf(log_buffer, "switching back to previous directory %s", priv_dir);
 					log_err(-1, __func__, log_buffer);
 					priv_dir_update_fail = 1;
 				} else {
 					(void)unlink("sched.lock");
 					lockfds = open("sched.lock", O_CREAT|O_WRONLY, 0644);
 					if (lockfds < 0) {
-						sprintf(log_buffer, "PBS validation checks for the directory %s are not passed", tmp_priv_dir);
-						sprintf(log_buffer, "switching back to the previous existing directory %s", priv_dir);
+						sprintf(log_buffer, "PBS failed validation checks for directory %s", tmp_priv_dir);
+						sprintf(log_buffer, "switching back to previous directory %s", priv_dir);
 						log_err(-1, __func__, log_buffer);
 						priv_dir_update_fail = 1;
 						/*
@@ -2535,7 +2535,7 @@ sched_settings_frm_svr(struct batch_status *status)
 						(void)write(lockfds, log_buffer, strlen(log_buffer));
 						free(priv_dir);
 						priv_dir = tmp_priv_dir;
-						sprintf(log_buffer, "scheduler priv directory is changed to %s", priv_dir);
+						sprintf(log_buffer, "scheduler priv directory has changed to %s", priv_dir);
 						schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_INFO,
 								"reconfigure", log_buffer);
 					}
@@ -2613,14 +2613,14 @@ update_svr_schedobj(int connector, int cmd, int alarm_time)
 	/* Stat the scheduler to get details of sched */
 	ss = pbs_statsched(connector, sc_name, NULL, NULL);
 	if (ss == NULL) {
-		sprintf(log_buffer, "can't fetch the scheduler attributes from server");
+		sprintf(log_buffer, "Unable to retrieve the scheduler attributes from server");
 		log_err(-1, __func__, log_buffer);
 		return 1;
 	}
 	sched_settings_frm_svr(ss);
 
 	if (!dflt_sched && (partitions == NULL)) {
-		sprintf(log_buffer, "scheduler should contain at least single partition");
+		sprintf(log_buffer, "Scheduler does not contain a partition. shutting down");
 		log_err(-1, __func__, log_buffer);
 		return 1;
 	}

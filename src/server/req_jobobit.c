@@ -653,7 +653,7 @@ rel_resc(job *pjob)
 	if (find_assoc_sched_pj(pjob, &psched))
 		set_scheduler_flag(SCH_SCHEDULE_TERM, psched);
 	else {
-		sprintf(log_buffer, "No scheduler associated with the job %s", pjob->ji_qs.ji_jobid);
+		sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);
 		log_err(-1, __func__, log_buffer);
 	}
 }

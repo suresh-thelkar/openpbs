@@ -332,7 +332,7 @@ req_runjob(struct batch_request *preq)
 	}
 	
 	if (!find_assoc_sched_jid(jid, &psched)) {
-		sprintf(log_buffer, "No scheduler associated with the job %s", jid);
+		sprintf(log_buffer, "Unable to reach scheduler associated with job %s", jid);
 		log_err(-1, __func__, log_buffer);
 		req_reject(PBSE_IVALREQ, 0, preq);
 		return;
