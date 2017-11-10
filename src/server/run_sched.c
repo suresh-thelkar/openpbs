@@ -178,9 +178,16 @@ find_assoc_sched_jid(char *jid, pbs_sched **target_sched)
 	int k;
 	char *q_name;
 	pbs_sched *psched;
+	int t;
 
 	*target_sched = NULL;
-	pj = find_job(jid);
+
+	t = is_job_array(jid);
+	if ((t == IS_ARRAY_NO) || (t == IS_ARRAY_ArrayJob))
+		pj = find_job(jid);		/* regular or ArrayJob itself */
+	else
+		pj = find_arrayparent(jid); /* subjob(s) */
+
 	if (pj == NULL)
 		return 0;
 
@@ -498,9 +505,6 @@ schedule_jobs(pbs_sched *psched)
 			pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
 		}
 
-		/*psched = find_assoc_sched(jid);
-		if (psched == NULL)
-			return (-1);*/
 		if ((s = contact_sched(cmd, jid, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0)
 			return (-1);
 		else if (pdefr != NULL)
