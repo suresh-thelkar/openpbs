@@ -129,7 +129,11 @@ char *priv_dir = NULL;
 char *partitions = NULL;
 int sched_port = -1;
 char *logfile = (char *)0;
-char path_log[_POSIX_PATH_MAX];
+#ifdef WIN32
+char	path_log[_MAX_PATH];
+#else
+char	path_log[_POSIX_PATH_MAX];
+#endif
 int dflt_sched = 0;
 
 #ifdef WIN32

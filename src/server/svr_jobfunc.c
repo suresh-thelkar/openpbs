@@ -220,6 +220,23 @@ clear_default_resc(job *pjob)
 
 /**
  * @brief
+ * 		tickle_for_reply ()
+ * 		For internally generated requests to the server we would like
+ * 		processing of the reply from the particular server subsystem
+ * 		to happen as "soon" as the server get back to its main loop -
+ * 		see server's main loop and "next_task()" and variable, "waittime".
+ * 		By placing a do nothing task on the "timed_task_list" whose time
+ * 		is now (or already passed), we can get next_task() to look at the
+ * 		"task_list_immed" tasks now rather than wait for a while
+ */
+void
+tickle_for_reply(void)
+{
+	(void)set_task(WORK_Timed, time_now + 10, 0, (void *)0);
+}
+
+/**
+ * @brief
  * 		svr_enquejob	-	Enqueue the job into specified queue.
  *
  * @param[in]	pjob	-	The job to be enqueued.
@@ -4402,25 +4419,6 @@ handle_qmgr_reply_to_startORenable(struct work_task *pwt)
 	 *action.  We will pass on that for now.
 	 */
 }
-
-
-/**
- * @brief
- * 		tickle_for_reply ()
- * 		For internally generated requests to the server we would like
- * 		processing of the reply from the particular server subsystem
- * 		to happen as "soon" as the server get back to its main loop -
- * 		see server's main loop and "next_task()" and variable, "waittime".
- * 		By placing a do nothing task on the "timed_task_list" whose time
- * 		is now (or already passed), we can get next_task() to look at the
- * 		"task_list_immed" tasks now rather than wait for a while
- */
-void
-tickle_for_reply(void)
-{
-	(void)set_task(WORK_Timed, time_now + 10, 0, (void *)0);
-}
-
 
 
 /**

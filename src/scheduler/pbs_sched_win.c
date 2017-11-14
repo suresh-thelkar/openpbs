@@ -118,7 +118,6 @@
 #include	"pbs_ifl.h"
 #include	"pbs_ecl.h"
 #include	"log.h"
-#include	"resmon.h"
 #include	"sched_cmds.h"
 #include	"server_limits.h"
 #include	"net_connect.h"
@@ -126,6 +125,8 @@
 #include	"rpp.h"
 #include	"pbs_internal.h"
 #include	"pbs_share.h"
+#include	"config.h"
+#include	"fifo.h"
 
 
 struct		connect_handle connection[NCONNECTS];
@@ -136,6 +137,8 @@ int		second_connection = -1;
 struct tpp_config tpp_conf; /* global settings for tcp */
 
 #define		START_CLIENTS	2	/* minimum number of clients */
+#define		MAX_PORT_NUM 65535
+#define		STARTING_PORT_NUM 15050
 pbs_net_t	*okclients = NULL;	/* accept connections from */
 int		numclients = 0;		/* the number of clients */
 char		*configfile = NULL;	/* name of file containing
@@ -151,12 +154,6 @@ extern char	*msg_noloopbackstopdaemon;
 sigset_t	allsigs;
 #endif
 
-static char    *logfile = (char *)0;
-#ifdef WIN32
-static char	path_log[_MAX_PATH];
-#else
-static char	path_log[_POSIX_PATH_MAX];
-#endif
 int 		pbs_rm_port;
 int		got_sigpipe = 0;   /* needed for UNIX so we need the symbol */
 
@@ -677,114 +674,6 @@ server_command(char **jid)
 }
 
 
-/**
- * @brief
- * 		update_svr_schedobj - sends scheduler attributes to pbs_server on the first
- *			 contact of the server.
- *
- * @param[in]	cmd	-	scheduling command from the server -- see sched_cmds.h
- * @param[in]	alarm	-	alarm value, set if non-zero
- *
- * @par Side-Effects: none
- *
- * @par MT-Unsafe
- *
- * @return	void
- */
-static	char scheduler_name[PBS_MAXHOSTNAME+1] = "Me";  /*arbitrary string*/
-
-/**
- * @brief
- *	Updates a set of attribute values of scheduler to the server and also does a status of this scheduler
- *	on server and fetches the updates of its attributes.
- *
- * @param[in] connector - socket descriptor to server
- * @param[in] cmd     - scheduler command
- * @param[in] alarm_time  - value to be updated for scheduler cycle length.
- *
- *
- * @retval Error code
- * @return -1 - Failure
- * @return  0 - Success
- *
- * @par Side Effects:
- *	None
- *
- *
- */
-int
-update_svr_schedobj(int connector, int cmd, int alarm_time)
-{
-	char timestr[128];
-	char port_str[MAX_INT_LEN];
-	static	int svr_knows_me = 0;
-	int	err;
-	struct	attropl	*attribs, *patt;
-	struct batch_status *ss = NULL;
-
-	/* This command is only sent on restart of the server */
-	if (cmd != 0 && cmd == SCH_SCHEDULE_FIRST)
-		svr_knows_me = 0;
-
-	if (cmd !=0 && svr_knows_me || cmd == SCH_ERROR || connector < 0)
-		return 0;
-
-	/* Stat the scheduler to get details of sched */
-	ss = pbs_statsched(connector, sc_name, NULL, NULL);
-	if (ss == NULL) {
-		sprintf(log_buffer, "can't fetch the scheduler attributes from server");
-		log_err(-1, __func__, log_buffer);
-		return 1;
-	}
-	sched_settings_frm_svr(ss);
-
-	if (log_dir == NULL || priv_dir == NULL || partitions = NULL) {
-		sprintf(log_buffer, "scheduler should contain at least single partition");
-		log_err(-1, __func__, log_buffer);
-		return 1;
-	}
-
-	pbs_statfree(ss);
-
-	/* update the sched with new values */
-	attribs = (struct  attropl *)calloc(4, sizeof(struct attropl));
-	if (attribs == NULL) {
-		sprintf(log_buffer, "can't update scheduler attribs, calloc failed");
-		log_err(-1, __func__, log_buffer);
-		return 1;
-	}
-	patt = attribs;
-	patt->name = ATTR_SchedHost;
-	patt->value = scheduler_name;
-	patt->next = patt + 1;
-	patt++;
-	patt->name = ATTR_sched_port;
-	snprintf(port_str, MAX_INT_LEN, "%d", sched_port);
-	patt->value = port_str;
-	patt->next = patt + 1;
-	patt++;
-	patt->name = ATTR_version;
-	patt->value = pbs_version;
-	if (alarm_time) {
-		patt->next = patt + 1;
-		patt++;
-		patt->name = ATTR_sched_cycle_len;
-		snprintf(timestr, sizeof(timestr), "%d", alarm_time);
-		patt->value = timestr;
-	}
-	patt->next = NULL;
-
-	err = pbs_manager(connector,
-		MGR_CMD_SET, MGR_OBJ_SCHED,
-		sc_name, attribs, NULL);
-	if (err == 0 && svr_knows_me == 0)
-		svr_knows_me = 1;
-
-	free(attribs);
-
-	return 0;
-}
-
 #ifdef WIN32
 
 /**
@@ -1008,7 +897,7 @@ main(int argc, char *argv[])
 #endif
 
 	char		host[PBS_MAXHOSTNAME+1];
-	unsigned int	port;
+	int		try_port;
 
 #ifndef DEBUG
 	char		*dbfile = "sched_out";
@@ -1121,7 +1010,7 @@ main(int argc, char *argv[])
 
 	glob_argv = argv;
 
-	port = pbs_conf.scheduler_service_port;
+	sched_port = pbs_conf.scheduler_service_port;
 	pbs_rm_port = pbs_conf.manager_service_port;
 
 #ifndef WIN32
@@ -1142,8 +1031,8 @@ main(int argc, char *argv[])
 				logfile = optarg;
 				break;
 			case 'S':
-				port = atoi(optarg);
-				if (port == 0) {
+				sched_port = atoi(optarg);
+				if (sched_port == 0) {
 					fprintf(stderr,
 						"%s: illegal port\n", optarg);
 					errflg = 1;
@@ -1184,6 +1073,16 @@ main(int argc, char *argv[])
 				break;
 		}
 	}
+	/* Check whether the sched name is specified in command line args
+	 * If specified then copy the sched name
+	 * */
+	if (argc > optind)
+		strncpy(sc_name, argv[optind], PBS_MAXSCHEDNAME - 1);
+	else {
+		strncpy(sc_name, PBS_DFLT_SCHED_NAME, PBS_MAXSCHEDNAME -1);
+		dflt_sched = 1;
+	}
+	sc_name[PBS_MAXSCHEDNAME] = '\0';
 	if (errflg) {
 #ifdef WIN32
 		usage2(argv[0]);
@@ -1207,8 +1106,12 @@ main(int argc, char *argv[])
 
 		exit(1);
 	}
+	if (dflt_sched) {
+		(void)sprintf(log_buffer, "%s/sched_priv", pbs_conf.pbs_home_path);
+	} else {
+		(void)sprintf(log_buffer, "%s/sched_priv_%s", pbs_conf.pbs_home_path, sc_name);
+	}
 
-	(void)sprintf(log_buffer, "%s/sched_priv", pbs_conf.pbs_home_path);
 #if !defined(DEBUG) && !defined(NO_SECURITY_CHECK)
 #ifdef WIN32
 	/* For windows, do not check full path. Allow system to put in */
@@ -1231,8 +1134,11 @@ main(int argc, char *argv[])
 #endif
 		exit(1);
 	}
-	(void)sprintf(path_log,   "%s/sched_logs", pbs_conf.pbs_home_path);
-
+	if (dflt_sched) {
+		(void)sprintf(path_log,   "%s/sched_logs", pbs_conf.pbs_home_path);
+	} else {
+		(void)sprintf(path_log,   "%s/sched_logs_%s", pbs_conf.pbs_home_path, sc_name);
+	}
 
 	/* The following is code to reduce security risks                */
 	/* start out with standard umask, system resource limit infinite */
@@ -1364,16 +1270,37 @@ main(int argc, char *argv[])
 		log_err(errno, id, "setsockopt");
 		die(0);
 	}
-	saddr.sin_family = AF_INET;
-	saddr.sin_port = htons(port);
-	saddr.sin_addr.s_addr = INADDR_ANY;
-	if (bind(server_sock, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
-#ifdef WIN32
-		errno = WSAGetLastError();
-#endif
-		log_err(errno, id, "bind");
-		die(0);
+
+	if (dflt_sched) {
+		saddr.sin_family = AF_INET;
+		saddr.sin_port = htons(sched_port);
+		saddr.sin_addr.s_addr = INADDR_ANY;
+		if (bind(server_sock, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
+			errno = WSAGetLastError();
+			log_err(errno, __func__, "bind");
+			die(0);
+		}
+	} else {
+		for (try_port=STARTING_PORT_NUM;try_port < MAX_PORT_NUM;try_port++) {
+			/* try to bind this socket to a reserved port */
+			saddr.sin_family = AF_INET;
+			saddr.sin_addr.s_addr = INADDR_ANY;
+			saddr.sin_port = htons(try_port);
+			memset(&(saddr.sin_zero), '\0', sizeof(saddr.sin_zero));
+			if (bind(server_sock, (struct sockaddr *)&saddr, sizeof(saddr)) != -1) {
+				break;
+			}
+			errno = WSAGetLastError();
+			if ((errno != EADDRINUSE) && (errno != EADDRNOTAVAIL))
+				break;
+		}
+		if (try_port == MAX_PORT_NUM) {
+			log_err(errno, __func__, "No free ports are available");
+			die(0);
+		}
+		sched_port = try_port;
 	}
+
 	if (listen(server_sock, 5) < 0) {
 #ifdef WIN32
 		errno = WSAGetLastError();
@@ -1544,6 +1471,14 @@ main(int argc, char *argv[])
 	sprintf(log_buffer, "%s startup pid %d", argv[0], pid);
 	log_record(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_INFO, id, log_buffer);
 
+	connector = cnt2server_extend(NULL, SC_DAEMON);
+	if (update_svr_schedobj(connector, 0, alarm_time)) {
+		sprintf(log_buffer, "update_svr_schedobj failed");
+		log_err(-1, __func__, log_buffer);
+		return -1;
+	}
+	update_svr_sched_state(SC_IDLE);
+
 	rpp_fd = -1;
 	if (pbs_conf.pbs_use_tcp == 1) {
 		char *nodename;
@@ -1559,12 +1494,12 @@ main(int argc, char *argv[])
 		set_tpp_funcs(log_tppmsg);
 
 		if (pbs_conf.auth_method == AUTH_RESV_PORT) {
-		rc = set_tpp_config(&pbs_conf, &tpp_conf, nodename, pbs_conf.scheduler_service_port,
+		rc = set_tpp_config(&pbs_conf, &tpp_conf, nodename, sched_port,
 							pbs_conf.pbs_leaf_routers, pbs_conf.pbs_use_compression,
 							TPP_AUTH_RESV_PORT, NULL, NULL);
 		} else {
 			/* for all non-resv-port based authentication use a callback from TPP */
-			rc = set_tpp_config(&pbs_conf, &tpp_conf, nodename, pbs_conf.scheduler_service_port,
+			rc = set_tpp_config(&pbs_conf, &tpp_conf, nodename, sched_port,
 								pbs_conf.pbs_leaf_routers, pbs_conf.pbs_use_compression,
 								TPP_AUTH_EXTERNAL, get_ext_auth_data, validate_ext_auth_data);
 		}
@@ -1634,10 +1569,11 @@ main(int argc, char *argv[])
 		if (!FD_ISSET(server_sock, &fdset))
 			continue;
 
+		pbs_disconnect(connector);
 		cmd = server_command(&runjobid);
 
 		/*based on cmd: send|not scheduler's PBS version to server*/
-		if (update_svr_schedobj(cmd, alarm_time)) {
+		if (update_svr_schedobj(connector, cmd, alarm_time)) {
 			sprintf(log_buffer, "update_svr_schedobj failed");
 			log_err(-1, __func__, log_buffer);
 			return -1;
