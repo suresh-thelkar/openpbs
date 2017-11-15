@@ -88,7 +88,7 @@ typedef struct pbs_sched {
 	int svr_do_sched_high;
 	pbs_net_t pbs_scheduler_addr;
 	unsigned int pbs_scheduler_port;
-	time_t sch_next_schedule;	/* when to next run scheduler cycle */
+	time_t sch_next_schedule;		/* when to next run scheduler cycle */
 	char sc_name[PBS_MAXSCHEDNAME];
 	/* sched object's attributes  */
 	attribute sch_attr[SCHED_ATR_LAST];
