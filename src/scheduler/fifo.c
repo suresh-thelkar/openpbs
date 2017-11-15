@@ -122,19 +122,19 @@
 static prev_job_info *last_running = NULL;
 static int last_running_size = 0;
 
-char scheduler_name[PBS_MAXHOSTNAME+1] = "Me";  /*arbitrary string*/
-char sc_name[PBS_MAXSCHEDNAME];
-char *log_dir = NULL;
-char *priv_dir = NULL;
-char *partitions = NULL;
-int sched_port = -1;
-char *logfile = (char *)0;
+char	scheduler_name[PBS_MAXHOSTNAME+1] = "Me";  /*arbitrary string*/
+char	sc_name[PBS_MAXSCHEDNAME];
+char	*log_dir = NULL;
+char	*priv_dir = NULL;
+char	*partitions = NULL;
+int	sched_port = -1;
+char	*logfile = (char *)0;
 #ifdef WIN32
 char	path_log[_MAX_PATH];
 #else
 char	path_log[_POSIX_PATH_MAX];
 #endif
-int dflt_sched = 0;
+int	dflt_sched = 0;
 
 #ifdef WIN32
 extern void win_toolong(void);
