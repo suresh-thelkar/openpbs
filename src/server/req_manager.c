@@ -1718,7 +1718,14 @@ mgr_sched_unset(struct batch_request *preq)
 		req_reject(PBSE_UNKSCHED, 0, preq);
 		return;
 	}
-	plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);
+
+
+	for (plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);plist;plist = (struct svrattrl *)GET_NEXT(plist->al_link)) {
+		if (strcasecmp(plist->al_name, ATTR_sched_log) == 0 ||
+			strcasecmp(plist->al_name, ATTR_sched_priv) == 0) {
+			set_scheduler_flag(SCH_ATTRS_CONFIGURE, psched);
+		}
+	}
 
 	rc = mgr_unset_attr(psched->sch_attr, sched_attr_def, SCHED_ATR_LAST, plist,
 		preq->rq_perm, &bad_attr, (void *)psched, PARENT_TYPE_SCHED, INDIRECT_RES_CHECK);

@@ -350,7 +350,7 @@ req_signaljob2(struct batch_request *preq, job *pjob)
 					/* not from scheduler, change substate so the  */
 					/* scheduler will resume the job when possible */
 					svr_setjobstate(pjob, JOB_STATE_RUNNING, JOB_SUBSTATE_SCHSUSP);
-					if (find_assoc_sched_pj(pjob, &psched))
+					if (find_assoc_sched_jid(pjob->ji_qs.ji_jobid, &psched))
 						set_scheduler_flag(SCH_SCHEDULE_NEW, psched);
 					else {
 						sprintf(log_buffer, "Unable to reach scheduler associated with job %s", pjob->ji_qs.ji_jobid);

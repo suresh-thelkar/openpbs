@@ -259,7 +259,7 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 	psched = (pbs_sched *) pobj;
 
 	if (pobj == dflt_scheduler)
-		return PBSE_OP_NOT_PERMITTED;
+		return PBSE_SCHED_OP_NOT_PERMITTED;
 
 	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
@@ -275,7 +275,7 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
 	}
-	set_scheduler_flag(SCH_CONFIGURE, psched);
+	set_scheduler_flag(SCH_ATTRS_CONFIGURE, psched);
 	return PBSE_NONE;
 }
 
@@ -299,7 +299,7 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 	psched = (pbs_sched *) pobj;
 
 	if (pobj == dflt_scheduler)
-		return PBSE_OP_NOT_PERMITTED;
+		return PBSE_SCHED_OP_NOT_PERMITTED;
 
 	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
@@ -315,7 +315,7 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
 	}
-	set_scheduler_flag(SCH_CONFIGURE, psched);
+	set_scheduler_flag(SCH_ATTRS_CONFIGURE, psched);
 	return PBSE_NONE;
 }
 
@@ -511,7 +511,7 @@ action_sched_partition(attribute *pattr, void *pobj, int actmode)
 	int i;
 	int k;
 	if (pobj == dflt_scheduler)
-		return PBSE_OP_NOT_PERMITTED;
+		return PBSE_SCHED_OP_NOT_PERMITTED;
 	pin_sched = (pbs_sched*) pobj;
 
 	for (i=0; i < pattr->at_val.at_arst->as_usedptr; ++i) {
@@ -529,12 +529,12 @@ action_sched_partition(attribute *pattr, void *pobj, int actmode)
 					if ((part_attr->at_val.at_arst->as_string[k] != NULL)
 							&& (!strcmp(pattr->at_val.at_arst->as_string[i],
 									part_attr->at_val.at_arst->as_string[k])))
-						return PBSE_PART_ALREADY_USED;
+						return PBSE_SCHED_PARTITION_ALREADY_EXISTS;
 				}
 			}
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
 	}
-	set_scheduler_flag(SCH_CONFIGURE, pin_sched);
+	set_scheduler_flag(SCH_ATTRS_CONFIGURE, pin_sched);
 	return PBSE_NONE;
 }

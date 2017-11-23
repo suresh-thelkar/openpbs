@@ -464,8 +464,7 @@ req_runjob(struct batch_request *preq)
 		/* ensure that request is removed if client connect is closed */
 		net_add_close_func(preq->rq_conn, clear_from_defr);
 
-		if ((strcmp(psched->sch_attr[SCHED_ATR_sched_state].at_val.at_str, SC_DOWN))
-			&&  schedule_jobs(psched) == -1) {
+		if (schedule_jobs(psched) == -1) {
 			/* unable to contact the Scheduler, reject */
 			req_reject(PBSE_NOSCHEDULER, 0, preq);
 			/* unlink and free the deferred request entry */
