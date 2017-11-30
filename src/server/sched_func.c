@@ -204,7 +204,7 @@ action_sched_port(attribute *pattr, void *pobj, int actmode)
 	pbs_sched *psched;
 	psched = (pbs_sched *) pobj;
 
-	if (actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
 		if ( dflt_scheduler && psched != dflt_scheduler) {
 			psched->pbs_scheduler_port = pattr->at_val.at_long;
 		}
@@ -231,7 +231,7 @@ action_sched_host(attribute *pattr, void *pobj, int actmode)
 	pbs_sched *psched;
 	psched = (pbs_sched *) pobj;
 
-	if (actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
 		if ( dflt_scheduler && psched != dflt_scheduler)
 			psched->pbs_scheduler_addr = get_hostaddr(pattr->at_val.at_str);
 	}
@@ -261,7 +261,7 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 	if (pobj == dflt_scheduler)
 		return PBSE_SCHED_OP_NOT_PERMITTED;
 
-	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
 		while (psched != (pbs_sched*) 0) {
 			if (psched->sch_attr[SCHED_ATR_sched_priv].at_flags & ATR_VFLAG_SET) {
@@ -301,7 +301,7 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 	if (pobj == dflt_scheduler)
 		return PBSE_SCHED_OP_NOT_PERMITTED;
 
-	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
 		while (psched != (pbs_sched*) 0) {
 			if (psched->sch_attr[SCHED_ATR_sched_log].at_flags & ATR_VFLAG_SET) {
