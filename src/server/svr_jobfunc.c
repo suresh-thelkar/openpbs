@@ -117,6 +117,7 @@
 #include "win.h"
 #endif
 #include "job.h"
+#include "pbs_sched.h"
 #include "reservation.h"
 #include "pbs_error.h"
 #include "log.h"

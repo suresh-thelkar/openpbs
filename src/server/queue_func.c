@@ -76,6 +76,7 @@
 #include "pbs_db.h"
 #include "pbs_nodes.h"
 #include <memory.h>
+#include "pbs_sched.h"
 
 
 /* Global Data */

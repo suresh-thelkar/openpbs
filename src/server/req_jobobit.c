@@ -94,6 +94,7 @@
 #include "dis.h"
 #include "rpp.h"
 #include "libutil.h"
+#include "pbs_sched.h"
 
 
 /* External Global Data Items */

@@ -69,6 +69,7 @@
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "sched_cmds.h"
+#include "pbs_sched.h"
 
 
 /* Private Function local to this file */
@@ -82,6 +83,8 @@ int create_resreleased (job *pjob);
 
 extern char *msg_momreject;
 extern char *msg_signal_job;
+extern job  *chk_job_request(char *, struct batch_request *, int *);
+
 
 /**
  * @brief

@@ -144,6 +144,8 @@ extern char *msg_job_abort;
 extern pbs_list_head svr_deferred_req;
 extern time_t time_now;
 extern int   svr_totnodes;	/* non-zero if using nodes */
+extern job  *chk_job_request(char *, struct batch_request *, int *);
+
 
 /* private data */
 
