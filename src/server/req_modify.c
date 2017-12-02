@@ -70,6 +70,7 @@
 #include "hook.h"
 #include "sched_cmds.h"
 #include "pbs_internal.h"
+#include "pbs_sched.h"
 
 
 /* Global Data Items: */

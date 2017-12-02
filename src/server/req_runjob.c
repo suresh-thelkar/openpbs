@@ -103,6 +103,7 @@
 #include "hook.h"
 #include "provision.h"
 #include "pbs_share.h"
+#include "pbs_sched.h"
 
 
 /* External Functions Called: */
