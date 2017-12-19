@@ -440,8 +440,7 @@ set_sched_default(pbs_sched* psched)
 	if ((psched->sch_attr[(int) SCHED_ATR_sched_state].at_flags & ATR_VFLAG_SET) == 0) {
 		psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str = malloc(SC_STATUS_LEN + 1);
 		if (psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str == NULL) {
-			snprintf(log_buffer, LOG_BUF_SIZE-1, "malloc failure (errno %d)", errno);
-			log_err(PBSE_SYSTEM, __func__, log_buffer);
+			log_err(errno, __func__, "no memory");
 			return;
 		} else {
 			if (psched != dflt_scheduler)
@@ -457,8 +456,7 @@ set_sched_default(pbs_sched* psched)
 	if ((psched->sch_attr[(int) SCHED_ATR_sched_priv].at_flags & ATR_VFLAG_SET) == 0) {
 		psched->sch_attr[(int) SCHED_ATR_sched_priv].at_val.at_str = malloc(MAXPATHLEN + 1);
 		if (psched->sch_attr[(int) SCHED_ATR_sched_priv].at_val.at_str == NULL) {
-			snprintf(log_buffer, LOG_BUF_SIZE-1, "malloc failure (errno %d)", errno);
-			log_err(PBSE_SYSTEM, __func__, log_buffer);
+			log_err(errno, __func__, "no memory");
 			return;
 		} else {
 			if (psched != dflt_scheduler)
@@ -475,8 +473,7 @@ set_sched_default(pbs_sched* psched)
 	if ((psched->sch_attr[(int) SCHED_ATR_sched_log].at_flags & ATR_VFLAG_SET) == 0) {
 		psched->sch_attr[(int) SCHED_ATR_sched_log].at_val.at_str = malloc(MAXPATHLEN + 1);
 		if (psched->sch_attr[(int) SCHED_ATR_sched_log].at_val.at_str == NULL) {
-			snprintf(log_buffer, LOG_BUF_SIZE-1, "malloc failure (errno %d)", errno);
-			log_err(PBSE_SYSTEM, __func__, log_buffer);
+			log_err(errno, __func__, "no memory");
 			return;
 		} else {
 			if (psched != dflt_scheduler)
