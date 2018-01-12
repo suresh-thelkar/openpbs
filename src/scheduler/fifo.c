@@ -2379,6 +2379,8 @@ sched_settings_frm_svr(struct batch_status *status)
 	char *tmp_comment = NULL;
 	int clear_comment = 0;
 	extern char *partitions;
+	static char *priv_dir = NULL;
+	static char *log_dir = NULL;
 
 	attr = status->attribs;
 
@@ -2407,8 +2409,7 @@ sched_settings_frm_svr(struct batch_status *status)
 		int priv_dir_update_fail = 0;
 		struct attropl *patt;
 		char comment[MAX_LOG_SIZE] = {0};
-		static char *priv_dir = NULL;
-		static char *log_dir = NULL;
+		int validation_failed = 0;
 		if ((log_dir != NULL) && strcmp(log_dir, tmp_log_dir) != 0) {
 			(void)snprintf(path_log,  sizeof(path_log), tmp_log_dir);
 			log_close(1);
@@ -2444,6 +2445,7 @@ sched_settings_frm_svr(struct batch_status *status)
 					log_err(-1, __func__, log_buffer);
 				}
 				log_dir = tmp_log_dir;
+				validation_failed = 1;
 				return 0;
 			} else {
 				if (tmp_comment != NULL)
@@ -2457,7 +2459,7 @@ sched_settings_frm_svr(struct batch_status *status)
 		}
 		log_dir = tmp_log_dir;
 
-		if ((priv_dir != NULL) && strcmp(priv_dir, tmp_priv_dir) != 0) {
+		if (!validation_failed && (priv_dir != NULL) && strcmp(priv_dir, tmp_priv_dir) != 0) {
 			int c;
 			#if !defined(DEBUG) && !defined(NO_SECURITY_CHECK)
 				c  = chk_file_sec(tmp_priv_dir, 1, 0, S_IWGRP|S_IWOTH, 1);
