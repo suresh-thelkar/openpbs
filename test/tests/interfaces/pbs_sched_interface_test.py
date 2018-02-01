@@ -46,7 +46,7 @@ class TestSchedulerInterface(TestInterfaces):
 
     def setUp(self):
         TestInterfaces.setUp(self)
-        #self.scheduler.revert_to_defaults()
+        # self.scheduler.revert_to_defaults()
         a = {'partition': 'P1',
              'sched_host': self.server.hostname,
              'sched_port': '15051'}
@@ -296,4 +296,3 @@ class TestSchedulerInterface(TestInterfaces):
                             runas=ROOT_USER)
         self.server.expect(SCHED, {'scheduler_iteration': 500},
                            id='default', max_attempts=10)
-

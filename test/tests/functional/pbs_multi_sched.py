@@ -228,7 +228,7 @@ class TestMultipleSchedulers(TestFunctional):
                             {'scheduling': 'True'}, id="sc5")
         self.server.expect(SCHED, {'state': 'scheduling'},
                            id='sc5', max_attempts=10)
-  
+
     def test_resource_sched_reconfigure(self):
         """
         Test all schedulers will reconfigure while creating,
@@ -267,7 +267,7 @@ class TestMultipleSchedulers(TestFunctional):
         unsets partition attribute on scheduler and update scheduler logs.
         """
         self.setup_sc1()
-        #self.setup_sc2()
+        # self.setup_sc2()
         self.server.manager(MGR_CMD_SET, SCHED,
                             {'partition': (DECR, 'P1')}, id="sc1")
         self.server.manager(MGR_CMD_SET, SCHED,

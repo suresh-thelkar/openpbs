@@ -829,7 +829,7 @@ class PBSTestSuite(unittest.TestCase):
         for server in self.schedulers.values():
             for sched in server.keys():
                 if sched == 'default':
-                    self.revert_scheduler(server[sched], force) 
+                    self.revert_scheduler(server[sched], force)
 
     def revert_moms(self, force=False):
         """

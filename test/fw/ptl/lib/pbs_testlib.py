@@ -10968,8 +10968,10 @@ class Scheduler(PBSService):
         for name in self.tmpschd:
             if name != 'default':
                 self.server.schedulers[name].terminate()
-                sched_log = self.server.schedulers[name].attributes.get('sched_log')
-                sched_priv = self.server.schedulers[name].attributes.get('sched_priv')
+                sched_log = self.server.schedulers[name].attributes.get(
+                    'sched_log')
+                sched_priv = self.server.schedulers[name].attributes.get(
+                    'sched_priv')
                 self.du.rm(path=sched_log, recursive=True)
                 self.du.rm(path=sched_priv, recursive=True)
                 self.server.manager(MGR_CMD_DELETE, SCHED, id=name)
