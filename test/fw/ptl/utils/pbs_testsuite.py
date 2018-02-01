@@ -827,8 +827,9 @@ class PBSTestSuite(unittest.TestCase):
         Revert the values set for schedulers
         """
         for server in self.schedulers.values():
-            for sched in server.values():
-                self.revert_scheduler(sched, force)
+            for sched in server.keys():
+                if sched == 'default':
+                    self.revert_scheduler(server[sched], force) 
 
     def revert_moms(self, force=False):
         """
