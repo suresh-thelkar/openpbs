@@ -2932,16 +2932,22 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 		}
 
 		res->orig_str_avail = string_dup(val);
-		if (res->orig_str_avail == NULL)
+		if (res->orig_str_avail == NULL) {
+			snprintf(log_buffer, sizeof(log_buffer), "val = %s", val);
+			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 			return 0;
+		}
 
 		if (val[0] == '@') {
 			res->indirect_vnode_name = string_dup(&val[1]);
 			/* res -> indirect_res is assigned by a call to
 			 * resolve_indirect_resources()
 			 */
-			if (res->indirect_vnode_name == NULL)
+			if (res->indirect_vnode_name == NULL) {
+				snprintf(log_buffer, sizeof(log_buffer), "val[1] = %s", &val[1]);
+				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 				return 0;
+			}
 		}
 		else {
 			/* if the resource type is already set, clear it so we can set it here */
@@ -2952,12 +2958,18 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 			res->avail = res_to_num(val, &(res->type));
 			if (res->avail == SCHD_INFINITY) {
 				/* Verify that this is a string type resource */
-				if (!res->def->type.is_string)
+				if (!res->def->type.is_string) {
+					snprintf(log_buffer, sizeof(log_buffer), "res->avail: %f", res->avail);
+					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					return 0;
+				}
 			}
 			res->str_avail = break_comma_list(val);
-			if (res->str_avail == NULL)
+			if (res->str_avail == NULL) {
+				snprintf(log_buffer, sizeof(log_buffer), "val: %s", val);
+				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 				return 0;
+			}
 		}
 	}
 	else if (field == RF_ASSN) {
@@ -2972,8 +2984,11 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 		else
 			res->assigned = res_to_num(val, NULL);
 		res->str_assigned = string_dup(val);
-		if (res->str_assigned == NULL)
+		if (res->str_assigned == NULL) {
+			snprintf(log_buffer, sizeof(log_buffer), "val: %s", val);
+			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 			return 0;
+		}
 	}
 
 	if(res->def != NULL)

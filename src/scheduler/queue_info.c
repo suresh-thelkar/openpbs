@@ -314,6 +314,7 @@ query_queues(status *policy, int pbs_sd, server_info *sinfo)
 			}
 
 			qinfo_arr[qidx++] = qinfo;
+			qinfo_arr[qidx] = NULL;
 
 		} else
 			free_queue_info(qinfo);
@@ -358,13 +359,20 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 	char *endp;			/* used with strtol() */
 	sch_resource_t count;		/* used to convert string -> num */
 
-	if ((qinfo = new_queue_info(1)) == NULL)
+	if ((qinfo = new_queue_info(1)) == NULL) {
+		schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, "new_queue_info failed");
 		return NULL;
+	}
 
-	if (qinfo->liminfo == NULL)
+	if (qinfo->liminfo == NULL) {
+		snprintf(log_buffer, sizeof(log_buffer), "q->liminfo: %p", qinfo->liminfo);
+		schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 		return NULL;
+	}
 
 	if ((qinfo->name = string_dup(queue->name)) == NULL) {
+		snprintf(log_buffer, sizeof(log_buffer), "queue->name: %s", queue->name);
+		schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 		free_queue_info(qinfo);
 		return NULL;
 	}
@@ -396,6 +404,8 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 				qinfo->partition = string_dup(attrp->value);
 				if (qinfo->partition == NULL) {
 					log_err(errno, __func__, MEM_ERR_MSG);
+					snprintf(log_buffer, sizeof(log_buffer), "attrp->name:%s, attrp->value: %s", attrp->name, attrp->value);
+					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					free_queue_info(qinfo);
 					return NULL;
 				}
@@ -474,6 +484,8 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 					qinfo->qres = resp;
 
 				if (set_resource(resp, attrp->value, RF_AVAIL) == 0) {
+					snprintf(log_buffer, sizeof(log_buffer), "attrp->value: %s, name=%s, resc_val=%f", attrp->value, resp->name, resp->avail);
+					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					free_queue_info(qinfo);
 					return NULL;
 				}
@@ -485,6 +497,8 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 				qinfo->qres = resp;
 			if (resp != NULL) {
 				if (set_resource(resp, attrp->value, RF_ASSN) == 0) {
+					snprintf(log_buffer, sizeof(log_buffer), "attrp->value: %s, name=%s, resc_val=%f", attrp->value, resp->name, resp->avail);
+					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					free_queue_info(qinfo);
 					return NULL;
 				}
