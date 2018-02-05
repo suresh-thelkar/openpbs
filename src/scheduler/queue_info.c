@@ -396,6 +396,7 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 				qinfo->partition = string_dup(attrp->value);
 				if (qinfo->partition == NULL) {
 					log_err(errno, __func__, MEM_ERR_MSG);
+					free_queue_info(qinfo);
 					return NULL;
 				}
 			}
