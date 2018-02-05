@@ -10850,6 +10850,7 @@ class Scheduler(PBSService):
             raise PbsSchedConfigError(rc=1, rv=False, msg=m)
 
         if validate:
+            self.get_pid()
             self.signal('-HUP')
             try:
                 self.log_match("Sched;reconfigure;Scheduler is reconfiguring",
