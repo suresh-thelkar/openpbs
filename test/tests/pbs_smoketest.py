@@ -1317,7 +1317,9 @@ class SmokeTest(PBSTestSuite):
             for t in self.resc_types:
                 for f in self.resc_flags:
                     for c in self.resc_flags_ctl:
-                        self.logger.info("t= "+ str(t) + " f= " +str(f) + " c =" + str(c) + " k= " + str(k) + " v= " + str(v))
+                        self.logger.info("t= " + str(t) + " f= " + str(f) +
+                                         " c =" + str(c) + " k= " + str(k) +
+                                         " v= " + str(v))
                         self.delete_resource_helper(
                             self.resc_name, t, f, c, k, v)
                         self.logger.info("")
