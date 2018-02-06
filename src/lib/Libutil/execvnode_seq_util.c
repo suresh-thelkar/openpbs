@@ -593,6 +593,7 @@ dict_to_str(dictionary *dict)
 	struct map *m;
 	int prev = 0, first = 0, cur;
 	int begin_range=1;
+	int dict_len = 0;
 
 	if (dict == NULL)
 		return NULL;
@@ -609,8 +610,10 @@ dict_to_str(dictionary *dict)
 		return NULL;
 	}
 
+	dict_len = dict->length;
 	/* Write the number of occurrences followed by COUNT_TOK */
-	sprintf(condensed, "%d%s", dict->max_idx, COUNT_TOK);
+	//sprintf(condensed, "%d%s", dict->max_idx, COUNT_TOK);
+	snprintf(condensed, dict_len, "%d%s", dict->max_idx, COUNT_TOK);
 
 	m = w->map;
 
@@ -621,8 +624,10 @@ dict_to_str(dictionary *dict)
 		}
 		/* Concatenate the vnode followed by the separator
 		 * to start the range */
-		(void) strcat(condensed, tmp);
-		(void) strcat(condensed, WORD_TOK);
+		//(void) strcat(condensed, tmp);
+		(void) strncat(condensed, tmp, sizeof(condensed) - dict_len -1);
+		//(void) strcat(condensed, WORD_TOK);
+		(void) strncat(condensed, WORD_TOK, sizeof(condensed) - dict_len -1);
 
 		while (m != NULL) {
 			cur = m->val;
@@ -645,7 +650,8 @@ dict_to_str(dictionary *dict)
 					sprintf(buf, "%d%s", first, MAP_TOK);
 				else
 					sprintf(buf, "%d%s%d, ", first, RANGE_TOK, prev);
-				(void) strcat(condensed, buf);
+				//(void) strcat(condensed, buf);
+				(void) strncat(condensed, buf, sizeof(condensed) - dict_len -1);
 				begin_range=1;
 			}
 
@@ -655,7 +661,8 @@ dict_to_str(dictionary *dict)
 			sprintf(buf, "%d", first);
 		else
 			sprintf(buf, "%d%s%d", first, RANGE_TOK, prev);
-		(void) strcat(condensed, buf);
+		//(void) strcat(condensed, buf);
+		(void) strncat(condensed, buf, sizeof(condensed) - dict_len -1);
 
 		begin_range=1;
 
@@ -663,7 +670,8 @@ dict_to_str(dictionary *dict)
 		if (w != NULL)
 			m = w->map;
 		/* Concatenate the closing separator of the range */
-		strcat(condensed, WORD_MAP_TOK);
+		//strcat(condensed, WORD_MAP_TOK);
+		strncat(condensed, WORD_MAP_TOK, sizeof(condensed) - dict_len -1);
 
 		free(tmp);
 	}
