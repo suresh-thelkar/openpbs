@@ -497,7 +497,8 @@ query_queue_info(status *policy, struct batch_status *queue, server_info *sinfo)
 				qinfo->qres = resp;
 			if (resp != NULL) {
 				if (set_resource(resp, attrp->value, RF_ASSN) == 0) {
-					snprintf(log_buffer, sizeof(log_buffer), "attrp->value: %s, name=%s, resc_val=%f", attrp->value, resp->name, resp->avail);
+					snprintf(log_buffer, sizeof(log_buffer), "attrp->value: %s, name=%s, resc_val=%f",
+							attrp->value, resp->name, resp->avail);
 					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					free_queue_info(qinfo);
 					return NULL;

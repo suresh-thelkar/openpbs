@@ -2933,6 +2933,10 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 
 		res->orig_str_avail = string_dup(val);
 		if (res->orig_str_avail == NULL) {
+			snprintf(log_buffer, sizeof(log_buffer), "res->def->name:%s, res->def->type:%d, res->def->flags:%d",
+					res->def->name, res->def->type.is_string, res->def->flags);
+			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
+
 			snprintf(log_buffer, sizeof(log_buffer), "val = %s", val);
 			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 			return 0;
@@ -2944,6 +2948,10 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 			 * resolve_indirect_resources()
 			 */
 			if (res->indirect_vnode_name == NULL) {
+				snprintf(log_buffer, sizeof(log_buffer), "res->def->name:%s, res->def->type:%d, res->def->flags:%d",
+						res->def->name, res->def->type.is_string, res->def->flags);
+				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
+
 				snprintf(log_buffer, sizeof(log_buffer), "val[1] = %s", &val[1]);
 				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 				return 0;
@@ -2959,6 +2967,10 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 			if (res->avail == SCHD_INFINITY) {
 				/* Verify that this is a string type resource */
 				if (!res->def->type.is_string) {
+					snprintf(log_buffer, sizeof(log_buffer), "res->def->name:%s, res->def->type:%d, res->def->flags:%d",
+							res->def->name, res->def->type.is_string, res->def->flags);
+					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
+
 					snprintf(log_buffer, sizeof(log_buffer), "res->avail: %f", res->avail);
 					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 					return 0;
@@ -2966,6 +2978,10 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 			}
 			res->str_avail = break_comma_list(val);
 			if (res->str_avail == NULL) {
+				snprintf(log_buffer, sizeof(log_buffer), "res->def->name:%s, res->def->type:%d, res->def->flags:%d",
+						res->def->name, res->def->type.is_string, res->def->flags);
+				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
+
 				snprintf(log_buffer, sizeof(log_buffer), "val: %s", val);
 				schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 				return 0;
@@ -2985,6 +3001,10 @@ set_resource(schd_resource *res, char *val, enum resource_fields field)
 			res->assigned = res_to_num(val, NULL);
 		res->str_assigned = string_dup(val);
 		if (res->str_assigned == NULL) {
+			snprintf(log_buffer, sizeof(log_buffer), "res->def->name:%s, res->def->type:%d, res->def->flags:%d",
+					res->def->name, res->def->type.is_string, res->def->flags);
+			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
+
 			snprintf(log_buffer, sizeof(log_buffer), "val: %s", val);
 			schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_QUEUE, LOG_ERR, __func__, log_buffer);
 			return 0;
