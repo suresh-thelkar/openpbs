@@ -400,7 +400,7 @@ client_to_svr_extend(pbs_net_t hostaddr, unsigned int port, int authport_flags, 
 			case WSAEWOULDBLOCK:
 				FD_ZERO(&writeset);
 				FD_SET((unsigned int)sock, &writeset);
-				tv.tv_sec = conn_timeout;	/* connect timeout */
+				tv.tv_sec = 0;	/* connect timeout */
 				tv.tv_usec = 0;
 				ret = select(1, NULL, &writeset, NULL, &tv);
 				if (ret == SOCKET_ERROR) {

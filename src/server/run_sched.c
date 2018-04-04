@@ -292,6 +292,8 @@ contact_sched(int cmd, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int p
 	alarm(SCHEDULER_ALARM_TIME);
 #endif
 
+	(void)sprintf(log_buffer, "pbs_scheduler_addr=%lu, pbs_scheduler_port=%u", pbs_scheduler_addr,pbs_scheduler_port);
+	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_ERR, server_name, log_buffer);
 	/* Under win32, this function does a timeout wait on the non-blocking socket */
 	sock = client_to_svr(pbs_scheduler_addr, pbs_scheduler_port, 1); /* scheduler connection still uses resv-ports */
 	if (pbs_errno == PBSE_NOLOOPBACKIF)
