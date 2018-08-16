@@ -315,8 +315,6 @@ print_db_job(char *id, int no_attributes)
 	pbs_db_job_info_t dbjob;
 	pbs_db_jobscr_info_t jobscr;
 	job xjob;
-	pbs_db_attr_info_t attr_info;
-	void *state;
 	int db_conn_error;
 	char *db_errmsg = NULL;
 	char errmsg[PBS_MAX_DB_CONN_INIT_ERR + 1];
@@ -414,23 +412,7 @@ print_db_job(char *id, int no_attributes)
 
 		if (no_attributes == 0) {
 			printf("--attributes--\n");
-			attr_info.parent_id = dbjob.ji_jobid;
-			attr_info.parent_obj_type = PARENT_TYPE_JOB;
-			obj.pbs_db_obj_type = PBS_DB_ATTR;
-			obj.pbs_db_un.pbs_db_attr = &attr_info;
-			state = pbs_db_cursor_init(conn, &obj, NULL);
-			if (state == NULL)
-				return 0;
-			while (pbs_db_cursor_next(conn, state, &obj) == 0) {
-				printf("%s", attr_info.attr_name);
-				if (attr_info.attr_resc && attr_info.attr_resc[0] != 0)
-					printf(".%s", attr_info.attr_resc);
-				printf(" = ");
-				if (attr_info.attr_value)
-					printf("%s", attr_info.attr_value);
-				printf("\n");
-			}
-			pbs_db_cursor_close(conn, state);
+			/* DBDO */
 		}
 		printf("\n");
 	}

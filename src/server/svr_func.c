@@ -207,6 +207,7 @@ extern int max_connection;
 
 #define ERR_MSG_SIZE 256
 #define MAXNLINE 2048
+#define SERVER_ID "1"
 
 /*
  * application provisioning returns success status as 1
@@ -6878,12 +6879,12 @@ replace_db_svrhost_file(char *db_svrhost_file_new, char *db_svrhost_file)
  *    		step combined with steps 1 & 2 will ensure that there are no problems even if
  *    		pbs_server/machine crashed before step 3 or 4.
  *
- * 		5. Finally if this was a first time start, and no server_id was found from the
- *    		database, then get a unique id from the database (pbs.svr_id_seq) into variable
- *    		pbs_server_id, so that it gets saved when pbsd_init does the svr_save upon
- *    		creation of the new server database. (All saves would need a server_id, but the
- *    		newly server database being created does not have any, so the need to get
- *    		one unique number from the database sequence generator "pbs.svr_id_seq")
+ * 5. Finally if this was a first time start, and no server_id was found from the
+ *    database, then get a server id from the macro SERVER_ID into variable
+ *    pbs_server_id, so that it gets saved when pbsd_init does the svr_save upon
+ *    creation of the new server database. (All saves would need a server_id, but the
+ *    newly server database being created does not have any, so the need to get
+ *    one id number from the the above said macro).
  *
  * 		Example of sequence:
  *  	New instance creation:
@@ -7023,7 +7024,7 @@ chk_and_update_db_svrhost(void)
 	}
 
 	if (pbs_server_id == NULL) {
-		pbs_server_id = pbs_db_get_unique_svrid(conn);
+		pbs_server_id = SERVER_ID;
 		/*
 		 * this is a "serverdb does not exist" (init_type = create) case,
 		 * server database will be created later in pbsd_init, so don't do
