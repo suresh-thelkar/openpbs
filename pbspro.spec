@@ -105,6 +105,7 @@ BuildRequires: libical-devel
 BuildRequires: ncurses-devel
 BuildRequires: perl
 BuildRequires: postgresql-devel
+BuildRequires: postgresql-contrib
 BuildRequires: python-devel >= 2.6
 BuildRequires: python-devel < 3.0
 BuildRequires: tcl-devel
@@ -151,6 +152,7 @@ Requires: bash
 Requires: expat
 Requires: libedit
 Requires: postgresql-server
+Requires: postgresql-contrib
 Requires: python >= 2.6
 Requires: python < 3.0
 Requires: tcl
