@@ -1,6 +1,6 @@
 #!/bin/bash -xe
 BUILDPKGS='build-essential dpkg-dev autoconf libtool rpm alien libssl-dev libxt-dev libpq-dev libexpat1-dev libedit-dev libncurses5-dev libical-dev libhwloc-dev pkg-config tcl-dev tk-dev python-dev swig'
-DEPPKGS='expat postgresql'
+DEPPKGS='expat postgresql postgresql-contrib'
 TESTPKGS='python-pip sudo man-db'
 ${DOCKER_EXEC} apt-get -qq update
 ${DOCKER_EXEC} apt-get install -y $BUILDPKGS $DEPPKGS $TESTPKGS
