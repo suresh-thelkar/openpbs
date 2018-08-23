@@ -132,6 +132,7 @@ Requires: bash
 Requires: expat
 Requires: libedit
 Requires: postgresql-server
+Requires: postgresql-contrib
 Requires: python >= 2.6
 Requires: python < 3.0
 Requires: tcl
