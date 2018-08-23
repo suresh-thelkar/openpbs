@@ -1064,7 +1064,7 @@ mgr_set_attr(attribute *pattr, attribute_def *pdef, int limit, svrattrl *plist, 
 static int
 mgr_unset_attr(attribute *pattr, attribute_def *pdef, int limit, svrattrl *plist, int privil, int *bad, void *pobj, int ptype, enum res_op_flag rflag)
 {
-	void *parent_id;
+	void *parent_id = NULL;
 	pbs_db_attr_info_t attr;
 	pbs_db_attr_list_t attr_list;
 	int		 do_indirect_check = 0;
