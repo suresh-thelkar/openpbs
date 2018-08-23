@@ -1074,7 +1074,6 @@ mgr_unset_attr(attribute *pattr, attribute_def *pdef, int limit, svrattrl *plist
 	resource_def	*prsdef;
 	resource	*presc;
 	struct pbsnode	*pnode = pobj;
-	/*pbs_db_attr_info_t attr_info;*/
 	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
 	pbs_db_obj_info_t obj;
 	obj.pbs_db_un.pbs_db_job = NULL;
@@ -3694,7 +3693,7 @@ mgr_sched_create(struct batch_request *preq)
 			preq->rq_perm, &bad, (void *) psched, ATR_ACTION_NEW);
 	if (rc != 0) {
 		reply_badattr(rc, bad, plist, preq);
-		free(psched);
+		sched_free(psched);
 		psched = NULL;
 	} else {
 

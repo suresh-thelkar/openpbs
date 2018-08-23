@@ -101,6 +101,8 @@ extern int recov_attr_db(pbs_db_conn_t *conn,
  * @param[in]	pque	- Address of the queue in the server
  * @param[out]	pdbque  - Address of the database queue object
  *
+ *@return 0      Success
+ *@return !=0    Failure
  */
 static int
 svr_to_db_que(pbs_queue *pque, pbs_db_que_info_t *pdbque, int updatetype)
@@ -128,6 +130,8 @@ svr_to_db_que(pbs_queue *pque, pbs_db_que_info_t *pdbque, int updatetype)
  * @param[out]	pque	- Address of the queue in the server
  * @param[in]	pdbque	- Address of the database queue object
  *
+ *@return 0      Success
+ *@return !=0    Failure
  */
 static int
 db_to_svr_que(pbs_queue *pque, pbs_db_que_info_t *pdbque)

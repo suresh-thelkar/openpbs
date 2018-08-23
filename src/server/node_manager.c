@@ -5768,7 +5768,6 @@ write_single_node_mom_attr(struct pbsnode *np)
 	pbs_list_head     wrtattr;
 	svrattrl     *psvrl;
 
-	/*pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;*/
 	pbs_db_obj_info_t obj;
 	obj.pbs_db_un.pbs_db_node = NULL;
 	obj.pbs_db_obj_type = PBS_DB_NODE;

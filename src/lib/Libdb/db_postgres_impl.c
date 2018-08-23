@@ -835,9 +835,8 @@ pbs_db_destroy_connection(pbs_db_conn_t *conn)
  *	Saves a new object into the database
  *
  * @param[in]	conn - Connected database handle
- * @param[in]	pbs_db_obj_info_t - Wrapper object that describes the object
- *		(and data) to insert
- * @param[in]	savetype - save type . quick or full
+ * @param[in]	pbs_db_obj_info_t - Wrapper object that describes the object (and data) to insert
+ * @param[in]	savetype - quick or full save
  *
  * @return      Error code
  * @retval	-1  - Failure
@@ -853,7 +852,7 @@ pbs_db_save_obj(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 
 /**
  * @brief
- *	Deletes object's attribute from the database
+ *	Delete attributes of an object from the database
  *
  * @param[in]	conn - Connected database handle
  * @param[in]	pbs_db_obj_info_t - Wrapper object that describes the object
@@ -862,7 +861,7 @@ pbs_db_save_obj(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
  *
  * @return      Error code
  * @retval       0  - success
- * @retval		-1  - Failure
+ * @retval	-1  - Failure
  *
  */
 int
@@ -872,7 +871,7 @@ pbs_db_delete_attr_obj(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, void *obj_id
 
 /**
  * @brief
- *	Add/update object's attribute from the database
+ *	Add/update attributes of an object to the database
  *
  * @param[in]	conn - Connected database handle
  * @param[in]	pbs_db_obj_info_t - Wrapper object that describes the object

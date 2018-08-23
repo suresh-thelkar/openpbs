@@ -195,6 +195,10 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
  * @param[in]	pnd  - Node object to load data into
  * @param[in]	row - The current row to load within the resultset
  *
+ * @return      Error code
+ * @retval	-1 - On Error
+ * @retval	 0 - On Success
+ * @retval	>1 - Number of attributes
  *
  */
 static int
@@ -531,6 +535,21 @@ pg_db_reset_mominfo(pbs_db_obj_info_t *obj)
 	return ;
 }
 
+/**
+ * @brief
+ *	Add or update attributes of a node
+ *
+ * @param[in]	conn - Connection handle
+ * @param[in]	obj  - Node information
+ * @param[in]	obj_id  - Node name
+ * @param[in]	attr_list - List of attributes
+ *
+ * @return      Error code
+ * @retval	-1 - Execution of prepared statement failed
+ * @retval	 0 - Success and > 0 rows were affected
+ * @retval	 1 - Execution succeeded but statement did not affect any rows
+ *
+ */
 int
 pg_db_add_update_attr_node(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, void *obj_id, pbs_db_attr_list_t *attr_list)
 {

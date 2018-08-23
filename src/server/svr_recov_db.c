@@ -149,6 +149,10 @@ update_svrlive()
  *
  * @param[in]	ps	-	Address of the server in pbs server
  * @param[out]	pdbsvr	-	Address of the database server object
+ * @param[in]   updatetype -    quick or full update
+ *
+ * @return   !=0   - Failure
+ * @return   0     - Success
  *
  */
 static int
@@ -180,7 +184,8 @@ svr_to_db_svr(struct server *ps, pbs_db_svr_info_t *pdbsvr, int updatetype)
  * @param[out]	ps	-	Address of the server in pbs server
  * @param[in]	pdbsvr	-	Address of the database server object
  *
- *
+ * @return   !=0   - Failure
+ * @return   0     - Success
  */
 int
 db_to_svr_svr(struct server *ps, pbs_db_svr_info_t *pdbsvr)
@@ -203,8 +208,11 @@ db_to_svr_svr(struct server *ps, pbs_db_svr_info_t *pdbsvr)
  *	Load a scheduler object in pbs_server from a database scheduler object
  *
  * @param[in]	ps - Address of the scheduler in pbs server
- * @param[in]	pdbsched  - Address of the database scheduler object
+ * @param[out] pdbsched  - Address of the database scheduler object
+ * @param[in] updatetype - quick or full update
  *
+ * @return   !=0   - Failure
+ * @return   0     - Success
  */
 static int
 svr_to_db_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched, int updatetype)
@@ -228,8 +236,8 @@ svr_to_db_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched, int updatet
  * @brief
  *	Load a database scheduler object from the scheduler object in server
  *
- * @param[in]	ps - Address of the scheduler in pbs server
- * @param[in]	pdbsched  - Address of the database scheduler object
+ * @param[out] ps - Address of the scheduler in pbs server
+ * @param[in]  pdbsched  - Address of the database scheduler object
  *
  */
 static int

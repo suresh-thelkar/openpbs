@@ -309,8 +309,8 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
  * @brief
  *	Load job data from the row into the job object
  *
- * @param[in]	res - Resultset from a earlier query
- * @param[in]	pj  - Job object to load data into
+ * @param[in]	res - Resultset from an earlier query
+ * @param[out]  pj  - Job object to load data into
  * @param[in]	row - The current row to load within the resultset
  *
  * @return error code
@@ -505,7 +505,7 @@ pg_db_load_job(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj)
  *	Find jobs
  *
  * @param[in]	conn - Connection handle
- * @param[in]	st   - The cursor state variable updated by this query
+ * @param[out]  st   - The cursor state variable updated by this query
  * @param[in]	obj  - Information of job to be found
  * @param[in]	opts - Any other options (like flags, timestamp)
  *
@@ -553,7 +553,7 @@ pg_db_find_job(pbs_db_conn_t *conn, void *st, pbs_db_obj_info_t *obj,
  *
  * @param[in]	conn - Connection handle
  * @param[in]	st   - The cursor state
- * @param[in]	obj  - Job information is loaded into this object
+ * @param[out]  obj  - Job information is loaded into this object
  *
  * @return      Error code
  * @retval	-1 - Failure
@@ -565,7 +565,7 @@ pg_db_next_job(pbs_db_conn_t *conn, void *st, pbs_db_obj_info_t *obj)
 {
 	pg_query_state_t *state = (pg_query_state_t *) st;
 
-	return (load_job(state->res, obj->pbs_db_un.pbs_db_job, state->row));
+	return load_job(state->res, obj->pbs_db_un.pbs_db_job, state->row);
 }
 
 /**
@@ -615,6 +615,8 @@ err:
  *
  * @param[in]	conn - Connection handle
  * @param[in]	obj  - Job script object
+ * @param[in]   savetype - Just a place holder here. Maintained the same prototype as with
+ * 			   the other database save functions since this is called through function pointer.
  *
  * @return      Error code
  * @retval	-1 - Failure
@@ -647,8 +649,8 @@ pg_db_save_jobscr(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
  * @brief
  *	load job script
  *
- * @param[in]	conn - Connection handle
- * @param[in]	obj  - Job script is loaded into this object
+ * @param[in]	  conn - Connection handle
+ * @param[in/out] obj  - Job script is loaded into this object
  *
  * @return      Error code
  * @retval	-1 - Failure

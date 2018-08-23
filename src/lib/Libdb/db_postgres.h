@@ -69,7 +69,7 @@ extern "C" {
 #if defined(WIN32)
 #define strtoll(n, e, b)	_strtoi64((n), (e), (b))
 typedef __int32 int32_t;
-typedef  __int64 int64_t;
+typedef __int64 int64_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 #elif defined(__hpux)
@@ -140,7 +140,6 @@ typedef unsigned __int64 uint64_t;
 #define STMT_DELETE_NODE "delete_node"
 #define STMT_REMOVE_NODEATTRS "remove_nodeattrs"
 #define STMT_UPDATE_NODEATTRS "update_nodeattrs"
-
 #define STMT_FIND_NODES_ORDBY_CREATTM "find_nodes_ordby_creattm"
 #define STMT_FIND_NODES_ORDBY_INDEX "find_nodes_ordby_index"
 #define STMT_SELECT_MOMINFO_TIME "select_mominfo_time"
@@ -226,7 +225,7 @@ typedef struct postgres_db_fn pg_db_fn_t;
  * Making them functions would effect performance.
  *
  * SET_PARAM_STR     - Loads null terminated string to postgres parameter at index "i"
- * SET_PARAM_STRSZ   - Same as LOAD_STR, only size of string is provided
+ * SET_PARAM_STRSZ   - Same as SET_PARAM_STR, only size of string is provided
  * SET_PARAM_INTEGER - Loads integer to postgres parameter at index "i"
  * SET_PARAM_BIGINT  - Loads BIGINT value to postgres parameter at index "i"
  * SET_PARAM_BIN     - Loads a BINARY value to postgres parameter at index "i"

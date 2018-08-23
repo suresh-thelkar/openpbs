@@ -359,7 +359,7 @@ char*
 pbs_db_get_svr_id(pbs_db_conn_t *conn, char *hostname)
 {
 	PGresult *res;
-	static char buf[20];
+	static char buf[PBS_MAXSERVERNAME+1];
 
 	SET_PARAM_STR(conn, hostname, 0);
 	if (pg_db_query(conn, STMT_SELECT_SVRID, 1, &res) != 0)

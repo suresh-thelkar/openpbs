@@ -167,7 +167,8 @@ db_to_svr_node(struct pbsnode *pnode, pbs_db_node_info_t *pdbnd)
  * @param[in]	pnode - Address of the node in the server
  * @param[out]	pdbnd - Address of the database node object
  *
- * @return	int
+ * @return 0    Success
+ * @return !=0  Failure
  */
 static int
 svr_to_db_node(struct pbsnode *pnode, pbs_db_node_info_t *pdbnd)

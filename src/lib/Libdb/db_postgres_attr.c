@@ -80,7 +80,7 @@ struct pg_array {
  *	Converts a postgres hstore(which is in the form of array) to attribute list.
  *
  * @param[in]	raw_array - Array string which is in the form of postgres hstore
- * @param[out]	attr_list - List of pbs_db_attr_list_t objects
+ * @param[out]  attr_list - List of pbs_db_attr_list_t objects
  *
  * @return      Error code
  * @retval	-1 - On Error
@@ -144,11 +144,10 @@ convert_array_to_db_attr_list(char *raw_array, pbs_db_attr_list_t *attr_list)
 
 /**
  * @brief
- *	Converts a attribute list to string array which is in the form of postgres hstore.
+ *	Converts an attribute list to string array which is in the form of postgres hstore.
  *
  * @param[in]	attr_list - List of pbs_db_attr_list_t objects
- * @param[out]	raw_array - Array string which is in the form of postgres hstore
-
+ * @param[out]  raw_array - Array string which is in the form of postgres hstore
  *
  * @return      Error code
  * @retval	-1 - On Error
@@ -173,6 +172,8 @@ convert_db_attr_list_to_array(char **raw_array, pbs_db_attr_list_t *attr_list)
 	}
 
 	array = malloc(len);
+	if (!array)
+		return -1;
 	array->ndim = htonl(1);
 	array->off = 0;
 	array->elemtype = htonl(TEXTOID);

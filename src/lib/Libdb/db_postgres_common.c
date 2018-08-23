@@ -813,9 +813,9 @@ pbs_ntohll(unsigned long long x)
  * @brief
  *	Execute a prepared DML (insert or update) statement
  *
- * @param[in]	conn - The connnection handle
- * @param[in]	stmt - Name of the statement (prepared previously)
- * @param[in]	num_vars - The number of parameters in the sql ($1, $2 etc)
+ * @param[in] 	  conn - The connnection handle
+ * @param[in]	  stmt - Name of the statement (prepared previously)
+ * @param[in]     num_vars - The number of parameters in the sql ($1, $2 etc)
  *
  * @return      Error code
  * @retval	-1 - Execution of prepared statement failed
@@ -830,20 +830,21 @@ int pg_db_cmd_ret(pbs_db_conn_t *conn, char *stmt, int num_vars)
 	char *rows_affected = NULL;
 
 	res = PQexecPrepared((PGconn*) conn->conn_db_handle, stmt, num_vars,
-							((pg_conn_data_t *) conn->conn_data)->paramValues,
-							((pg_conn_data_t *) conn->conn_data)->paramLengths,
-							((pg_conn_data_t *) conn->conn_data)->paramFormats, 0);
+			((pg_conn_data_t *) conn->conn_data)->paramValues,
+			((pg_conn_data_t *) conn->conn_data)->paramLengths,
+			((pg_conn_data_t *) conn->conn_data)->paramFormats, 0);
+
 	if (PQresultStatus(res) != PGRES_COMMAND_OK) {
 		pg_set_error(conn, "Execution of Prepared statement", stmt);
 		PQclear(res);
 		return -1;
 	}
 	rows_affected = PQcmdTuples(res);
+
 	/*
 	 *  we can't call PQclear(res) yet, since rows_affected
 	 * (used below) is a pointer to a field inside res (PGresult)
 	 */
-
 	if (rows_affected == NULL || strtol(rows_affected, NULL, 10) <= 0) {
 		PQclear(res);
 		return 1;

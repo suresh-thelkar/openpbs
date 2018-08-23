@@ -183,6 +183,10 @@ pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
  * @param[in]	presv  - resv object to load data into
  * @param[in]	row - The current row to load within the resultset
  *
+ * @return      Error code
+ * @retval	-1 - On Error
+ * @retval	 0 - On Success
+ * @retval	>1 - Number of attributes
  */
 static int
 load_resv(PGresult *res, pbs_db_resv_info_t *presv, int row)

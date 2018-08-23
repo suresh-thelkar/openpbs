@@ -147,11 +147,12 @@ make_attr(char *attr_name, char *attr_resc,
 
 /**
  * @brief
- *	Save the list of attributes to the database
+ *	Encode the given attributes to the database structure of type pbs_db_attr_list_t
  *
  * @param[in]	padef - Address of parent's attribute definition array
  * @param[in]	pattr - Address of the parent objects attribute array
  * @param[in]	numattr - Number of attributes in the list
+ * @param[out]  attr_list - pointer to the structure of type pbs_db_attr_list_t to which the attributes are encoded
  * @param[in]   all  - Encode all attributes
  *
  * @return   Array of Encoded attributes
@@ -225,14 +226,14 @@ encode_attr_db(struct attribute_def *padef, struct attribute *pattr, int numattr
 
 /**
  * @brief
- *	Recover the list of attributes from the database
+ *	Decode the list of attributes from the database to the regular attribute structure
  *
- *@param[in]	parent - pointer to parent object
- * @param[in]	attr_list - Information about the database attributes
- * @param[in]	padef - Address of parent's attribute definition array
- * @param[in]	pattr - Address of the parent objects attribute array
- * @param[in]	limit - Number of attributes in the list
- * @param[in]	unknown	- The index of the unknown attribute if any
+ * @param[in]	  parent - pointer to parent object
+ * @param[in]	  attr_list - Information about the database attributes
+ * @param[in]	  padef - Address of parent's attribute definition array
+ * @param[in/out] pattr - Address of the parent objects attribute array
+ * @param[in]	  limit - Number of attributes in the list
+ * @param[in]	  unknown	- The index of the unknown attribute if any
  *
  * @return      Error code
  * @retval	 0  - Success
@@ -434,12 +435,12 @@ out:
  * @brief
  *	Recover the list of attributes from the database
  *
- * @param[in]	parent - pointer to the parent object
- * @param[in]	attr_list - Information about the database attributes
- * @param[in]	padef - Address of parent's attribute definition array
- * @param[in]	pattr - Address of the parent objects attribute array
- * @param[in]	limit - Number of attributes in the list
- * @param[in]	unknown	- The index of the unknown attribute if any
+ * @param[in]	        parent - pointer to the parent object
+ * @param[in]	        attr_list - Information about the database attributes
+ * @param[in]	        padef - Address of parent's attribute definition array
+ * @param[in/out]	pattr - Address of the parent objects attribute array
+ * @param[in]	        limit - Number of attributes in the list
+ * @param[in]	        unknown	- The index of the unknown attribute if any
  *
  * @return      Error code
  * @retval	 0  - Success

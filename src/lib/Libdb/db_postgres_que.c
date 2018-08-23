@@ -129,9 +129,13 @@ pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
  *	Load queue data from the row into the queue object
  *
  * @param[in]	res - Resultset from a earlier query
- * @param[in]	pnd  - Queue object to load data into
+ * @param[in]	pq  - Queue object to load data into
  * @param[in]	row - The current row to load within the resultset
  *
+ * @return      Error code
+ * @retval	-1 - On Error
+ * @retval	 0 - On Success
+ * @retval	>1 - Number of attributes
  */
 static int
 load_que(PGresult *res, pbs_db_que_info_t *pq, int row)

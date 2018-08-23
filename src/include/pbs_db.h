@@ -329,11 +329,11 @@ typedef struct pbs_db_query_options pbs_db_query_options_t;
 #define PBS_DB_RESV			1
 #define PBS_DB_SVR			2
 #define PBS_DB_NODE			3
-#define PBS_DB_QUEUE		4
-#define PBS_DB_JOBSCR		5
-#define PBS_DB_SCHED		6
-#define PBS_DB_MOMINFO_TIME	7
-#define PBS_DB_NUM_TYPES	8
+#define PBS_DB_QUEUE			4
+#define PBS_DB_JOBSCR			5
+#define PBS_DB_SCHED			6
+#define PBS_DB_MOMINFO_TIME		7
+#define PBS_DB_NUM_TYPES		8
 
 
 /* connection error code */
@@ -677,7 +677,7 @@ int pbs_db_delete_attr_obj(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, void *ob
 
 /**
  * @brief
- *	Update/add attributes of an existing object from the database
+ *	Update/add attributes of an existing object to the database
  *
  * @param[in]	conn - Connected database handle
  * @param[in]	pbs_db_obj_info_t - Wrapper object that describes the object
@@ -1016,7 +1016,7 @@ int resize_buff(pbs_db_sql_buffer_t *dest, int size);
 
 /**
  * @brief
- *	Resets db Object
+ *	Resets databse object
  *
  * @param[in]	obj - db object
  *

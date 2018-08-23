@@ -164,7 +164,7 @@ pg_db_save_sched(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 		return -1;
 
 	free(raw_array);
-	/* Added the following to remove warning. Double check it */
+
 	return 0;
 }
 
@@ -176,6 +176,10 @@ pg_db_save_sched(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
  * @param[out]	psch  - Scheduler object to load data into
  * @param[in]	row - The current row to load within the resultset
  *
+ * @return      Error code
+ * @retval	-1 - On Error
+ * @retval	 0 - On Success
+ * @retval	>1 - Number of attributes
  */
 static int
 load_sched(PGresult *res, pbs_db_sched_info_t *psch, int row)

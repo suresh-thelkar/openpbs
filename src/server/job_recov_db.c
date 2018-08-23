@@ -135,8 +135,10 @@ extern time_t time_now;
  *
  * @param[in]	pjob - Address of the job in the server
  * @param[out]	dbjob - Address of the database job object
+ * @param[in]   updatetype - Quick or full update
  *
- * @return int
+ * @retval   !=0  Failure
+ * @retval   0    Success
  */
 static int
 svr_to_db_job(job *pjob, pbs_db_job_info_t *dbjob, int updatetype)
@@ -195,7 +197,8 @@ svr_to_db_job(job *pjob, pbs_db_job_info_t *dbjob, int updatetype)
  * @param[out]	pjob - Address of the job in the server
  * @param[in]	dbjob - Address of the database job object
  *
- * @return	int
+ * @retval   !=0  Failure
+ * @retval   0    Success
  */
 static int
 db_to_svr_job(job *pjob,  pbs_db_job_info_t *dbjob)
@@ -259,9 +262,10 @@ db_to_svr_job(job *pjob,  pbs_db_job_info_t *dbjob)
  * 		resv_save_db
  *
  * @param[in]	presv - Address of the resv in the server
- * @param[in]	dbresv - Address of the database resv object
+ * @param[out]  dbresv - Address of the database resv object
  *
- * @return	int
+ * @retval   !=0  Failure
+ * @retval   0    Success
  */
 static int
 svr_to_db_resv(resc_resv *presv,  pbs_db_resv_info_t *dbresv, int updatetype)
@@ -302,10 +306,11 @@ svr_to_db_resv(resc_resv *presv,  pbs_db_resv_info_t *dbresv, int updatetype)
  * @see
  * 		resv_recov_db
  *
- * @param[in]	presv - Address of the resv in the server
+ * @param[out]	presv - Address of the resv in the server
  * @param[in]	dbresv - Address of the database resv object
  *
- * @return	int
+ * @retval   !=0  Failure
+ * @retval   0    Success
  */
 static int
 db_to_svr_resv(resc_resv *presv, pbs_db_resv_info_t *pdresv)
@@ -360,7 +365,6 @@ job_save_db(job *pjob, int updatetype)
 	pbs_db_job_info_t dbjob;
 	pbs_db_obj_info_t obj;
 	pbs_db_conn_t *conn = svr_db_conn;
-	/*int i;*/
 	int savetype = PBS_UPDATE_DB_FULL;
 	int rc;
 
@@ -462,6 +466,16 @@ db_err:
 	return (-1);
 }
 
+/**
+ * @brief
+ *	Utility function called inside job_recov_db
+ *
+ * @param[in]	dbjob - Pointer to the database structure of a job
+ *
+ * @retval	 NULL - Failure
+ * @retval	!NULL - Success, pointer to job structure recovered
+ *
+ */
 job *
 job_recov_db_spl(pbs_db_job_info_t *dbjob)
 {
@@ -496,7 +510,6 @@ db_err:
  *	Recover job from database
  *
  * @param[in]	jid - Job id of job to recover
- * @param[in]   recov_subjob - Recover subjobs
  *
  * @return      The recovered job
  * @retval	 NULL - Failure
@@ -554,9 +567,9 @@ db_err:
  *
  * @param[in]	presv - The resv to save
  * @param[in]   updatetype:
- *			SAVERESV_QUICK - Quick update without attributes
- *			SAVERESV_FULL  - Full update with attributes
- *			SAVERESV_NEW   - New resv, insert into database
+ *		SAVERESV_QUICK - Quick update without attributes
+ *		SAVERESV_FULL  - Full update with attributes
+ *		SAVERESV_NEW   - New resv, insert into database
  *
  * @return      Error code
  * @retval	 0 - Success

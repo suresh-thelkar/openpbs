@@ -684,6 +684,7 @@ pbsd_init(int type)
 				&server.sv_attr[(int)SRV_ATR_Comment]);
 		}
 
+	/* now do sched db */
 	/* start a transaction */
 	if (pbs_db_begin_trx(conn, 0, 0) != 0)
 		return (-1);
