@@ -5639,18 +5639,19 @@ write_single_node_state(struct pbsnode *np)
 	int     hascomment;
 	int     hascurrentaoe;
 	char offline_bits[5];
+	pbs_db_attr_info_t attr;	
+	pbs_db_attr_list_t attr_list;
+	extern char	*get_vnode_state_str(char *);
 
 	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
 	pbs_db_obj_info_t obj;
 	obj.pbs_db_un.pbs_db_node = NULL;
 	obj.pbs_db_obj_type = PBS_DB_NODE;
-	pbs_db_attr_info_t attr;
-	pbs_db_attr_list_t attr_list;
+
 	attr_list.attr_count = 1;
 	attr_list.attributes = &attr;
 	memset(&attr, 0, sizeof(pbs_db_attr_info_t));
 
-	extern char	*get_vnode_state_str(char *);
 
 	DBPRT(("write_single_node_state: entered\n"))
 
@@ -5769,10 +5770,11 @@ write_single_node_mom_attr(struct pbsnode *np)
 	svrattrl     *psvrl;
 
 	pbs_db_obj_info_t obj;
-	obj.pbs_db_un.pbs_db_node = NULL;
-	obj.pbs_db_obj_type = PBS_DB_NODE;
 	pbs_db_attr_info_t attr;
 	pbs_db_attr_list_t attr_list;
+	obj.pbs_db_un.pbs_db_node = NULL;
+	obj.pbs_db_obj_type = PBS_DB_NODE;
+
 	attr_list.attr_count = 1;
 	attr_list.attributes = &attr;
 	memset(&attr, 0, sizeof(pbs_db_attr_info_t));
