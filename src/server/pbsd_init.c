@@ -388,7 +388,6 @@ pbsd_init(int type)
 	char *buf = NULL;
 	int buf_len = 0;
 	pbs_sched *psched;
-	int count;
 
 #ifndef WIN32
 #ifdef  RLIMIT_CORE
@@ -655,7 +654,7 @@ pbsd_init(int type)
 		type = RECOV_CREATE;
 	}
 	if (type != RECOV_CREATE) {
-
+		int count;
 		/* Server read success full ?*/
 
 		if (rc != 0) {

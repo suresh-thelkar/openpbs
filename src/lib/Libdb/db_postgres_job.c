@@ -414,7 +414,6 @@ pg_db_save_job(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	char *stmt;
 	pbs_db_job_info_t *pjob = obj->pbs_db_un.pbs_db_job;
 	int params;
-	int len = 0;
 	int rc;
 	char *raw_array = NULL;
 
@@ -446,6 +445,7 @@ pg_db_save_job(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	if (savetype == PBS_UPDATE_DB_QUICK) {
 		params = 24;
 	} else {
+		int len = 0;
 		/* convert attributes to postgres raw array format */
 		if ((len = convert_db_attr_list_to_array(&raw_array, &pjob->attr_list)) <= 0)
 			return -1;

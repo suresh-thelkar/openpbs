@@ -183,7 +183,6 @@ pg_db_save_que(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	pbs_db_que_info_t *pq = obj->pbs_db_un.pbs_db_que;
 	char *stmt;
 	int params;
-	int len = 0;
 	char *raw_array = NULL;
 
 	SET_PARAM_STR(conn, pq->qu_name, 0);
@@ -193,6 +192,7 @@ pg_db_save_que(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	if (savetype == PBS_UPDATE_DB_QUICK) {
 		params = 3;
 	} else {
+		int len = 0;
 		/* convert attributes to postgres raw array format */
 		if ((len = convert_db_attr_list_to_array(&raw_array, &pq->attr_list)) <= 0)
 			return -1;

@@ -138,7 +138,6 @@ pg_db_save_sched(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	pbs_db_sched_info_t *psch = obj->pbs_db_un.pbs_db_sched;
 	char *stmt;
 	int params;
-	int len = 0;
 	char *raw_array = NULL;
 
 	SET_PARAM_STR(conn, psch->sched_name, 0);
@@ -147,6 +146,7 @@ pg_db_save_sched(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	if (savetype == PBS_UPDATE_DB_QUICK) {
 		params = 2;
 	} else {
+		int len = 0;
 		/* convert attributes to postgres raw array format */
 		if ((len = convert_db_attr_list_to_array(&raw_array, &psch->attr_list)) <= 0)
 			return -1;

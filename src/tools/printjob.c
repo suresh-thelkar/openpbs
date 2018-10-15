@@ -317,7 +317,6 @@ print_db_job(char *id, int no_attributes)
 	job xjob;
 	int db_conn_error;
 	pbs_db_attr_info_t *attrs;
-	int i;
 	char *db_errmsg = NULL;
 	char errmsg[PBS_MAX_DB_CONN_INIT_ERR + 1];
 
@@ -415,6 +414,7 @@ print_db_job(char *id, int no_attributes)
 
 		attrs = dbjob.attr_list.attributes;
 		if (no_attributes == 0) {
+			int i;
 			printf("--attributes--\n");
 			for (i=0; i< dbjob.attr_list.attr_count; i++) {
 				printf("%s", attrs->attr_name);

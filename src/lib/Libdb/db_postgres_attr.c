@@ -209,9 +209,9 @@ convert_db_attr_list_to_array(char **raw_array, pbs_db_attr_list_t *attr_list)
  */
 void
 free_db_attr_list(pbs_db_attr_list_t *attr_list) {
-	int i;
 	if (attr_list->attributes != NULL) {
 		if (attr_list->attr_count > 0) {
+			int i;
 			for (i=0; i < attr_list->attr_count; i++) {
 				free(attr_list->attributes[i].attr_value);
 			}

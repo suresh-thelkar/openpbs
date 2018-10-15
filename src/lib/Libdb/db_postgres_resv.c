@@ -264,7 +264,6 @@ pg_db_save_resv(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	pbs_db_resv_info_t *presv = obj->pbs_db_un.pbs_db_resv;
 	char *stmt;
 	int params;
-	int len = 0;
 	char *raw_array = NULL;
 
 	SET_PARAM_STR(conn, presv->ri_resvid, 0);
@@ -287,6 +286,7 @@ pg_db_save_resv(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	if (savetype == PBS_UPDATE_DB_QUICK) {
 		params = 16;
 	} else {
+		int len = 0;
 		/* convert attributes to postgres raw array format */
 		if ((len = convert_db_attr_list_to_array(&raw_array, &presv->attr_list)) <= 0)
 			return -1;
