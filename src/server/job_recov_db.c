@@ -691,6 +691,8 @@ resv_recov_db(char *resvid)
 	if (db_to_svr_resv(presv, &dbresv) != 0)
 		goto db_err;
 
+	pbs_db_reset_obj(&obj);
+
 	if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
 		goto db_err;
 

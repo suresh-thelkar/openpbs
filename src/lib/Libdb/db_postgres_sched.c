@@ -160,8 +160,10 @@ pg_db_save_sched(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	else
 		stmt = STMT_INSERT_SCHED;
 
-	if (pg_db_cmd(conn, stmt, params) != 0)
+	if (pg_db_cmd(conn, stmt, params) != 0) {
+		free(raw_array);
 		return -1;
+	}
 
 	free(raw_array);
 

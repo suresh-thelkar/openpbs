@@ -962,6 +962,7 @@ pbsd_init(int type)
 					LOG_INFO, msg_daemonname, log_buffer);
 			}
 		}
+		pbs_db_reset_obj(&obj);
 	}
 	pbs_db_cursor_close(conn, state);
 

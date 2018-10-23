@@ -222,8 +222,10 @@ pg_db_save_svr(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj, int savetype)
 	else
 		stmt = STMT_INSERT_SVR;
 
-	if (pg_db_cmd(conn, stmt, params) != 0)
+	if (pg_db_cmd(conn, stmt, params) != 0) {
+		free(raw_array);
 		rc = -1;
+	}
 
 	free(raw_array);
 
