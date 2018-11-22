@@ -56,17 +56,6 @@ CREATE TABLE pbs.info (
 
 INSERT INTO pbs.info values('1.4.0'); /* schema version */
 
-/*
- * Sequence pbs.svr_id_seq is used to create svr_ids for new server entries.
- * The svr hostname (sv_hostname column) is associated with a 
- * sever_id (sv_name) column. This column serves as the id for the server, 
- * used for all subsequent queries. These "id" values are created from the
- * following sequence generator whenever a new server database is created
- * (typically at new installation).
- */
-CREATE SEQUENCE pbs.svr_id_seq;
-
-
 ---------------------- SERVER ------------------------------
 
 /*
