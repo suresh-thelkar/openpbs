@@ -699,7 +699,7 @@ pbsd_init(int type)
 
 		state = pbs_db_cursor_init(conn, &obj, NULL);
 		if (state == NULL) {
-			sprintf(log_buffer, "%s", (char *) conn->conn_db_err);
+			snprintf(log_buffer, LOG_BUF_SIZE, "%s", (char *) conn->conn_db_err);
 			log_err(-1, "pbsd_init", log_buffer);
 			pbs_db_cursor_close(conn, state);
 			(void) pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
@@ -721,7 +721,7 @@ pbsd_init(int type)
 				/* recover sched */
 				if ((psched = sched_recov_db(dbsched.sched_name)) != NULL) {
 					if(!strncmp(dbsched.sched_name, PBS_DFLT_SCHED_NAME,
-									strlen(PBS_DFLT_SCHED_NAME))) {
+						strlen(PBS_DFLT_SCHED_NAME))) {
 						dflt_scheduler = psched;
 
 					}

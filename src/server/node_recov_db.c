@@ -153,8 +153,7 @@ db_to_svr_node(struct pbsnode *pnode, pbs_db_node_info_t *pdbnd)
 
 
 	if ((decode_attr_db(pnode, &pdbnd->attr_list, node_attr_def,
-				pnode->nd_attr,
-				(int) ND_ATR_LAST, 0)) != 0)
+		pnode->nd_attr, (int) ND_ATR_LAST, 0)) != 0)
 		return -1;
 
 	return 0;
@@ -406,10 +405,9 @@ node_recov_db_raw(void *nd, pbs_list_head *phead)
 	pbs_db_node_info_t *dbnode =(pbs_db_node_info_t *) nd;
 
 	/* now convert attributes array to pbs list structure */
-	if ((make_pbs_list_attr_db(nd, &dbnode->attr_list,
-	                           node_attr_def, phead,
-					(int) ND_ATR_LAST, 0)) != 0)
-			return -1;
+	if ((make_pbs_list_attr_db(nd, &dbnode->attr_list, node_attr_def,
+		phead, (int) ND_ATR_LAST, 0)) != 0)
+		return -1;
 
 	return 0;
 }

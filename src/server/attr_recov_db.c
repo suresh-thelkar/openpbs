@@ -163,12 +163,12 @@ make_attr(char *attr_name, char *attr_resc,
 int
 encode_attr_db(struct attribute_def *padef, struct attribute *pattr, int numattr, pbs_db_attr_list_t *attr_list, int all)
 {
-	pbs_list_head	lhead;
-	int		i;
-	int 	j;
-	svrattrl	*pal;
-	int		rc = 0;
-	int 	count = 0;
+	pbs_list_head lhead;
+	int i;
+	int j;
+	svrattrl *pal;
+	int rc = 0;
+	int count = 0;
 	pbs_db_attr_info_t *attrs = NULL;
 
 	attr_list->attr_count = 0;
@@ -249,11 +249,11 @@ decode_attr_db(
 	int limit,
 	int unknown)
 {
-	int	  amt;
-	int	  index;
+	int amt;
+	int index;
 	svrattrl *pal = (svrattrl *)0;
 	svrattrl *tmp_pal = (svrattrl *)0;
-	int	  ret = 0;
+	int ret = 0;
 	int i;
 	pbs_db_attr_info_t *attrs = attr_list->attributes;
 	void **palarray = NULL;
@@ -306,7 +306,7 @@ decode_attr_db(
 
 		amt = pal->al_tsize - sizeof(svrattrl);
 		if (amt < 1) {
-			sprintf(log_buffer, "Invalid attr list size in DB");
+			snprintf(log_buffer,LOG_BUF_SIZE, "Invalid attr list size in DB");
 			log_err(-1, __func__, log_buffer);
 			goto out;
 		}
@@ -329,7 +329,7 @@ decode_attr_db(
 			if (unknown > 0) {
 				index = unknown;
 			} else {
-				sprintf(log_buffer,
+				snprintf(log_buffer,LOG_BUF_SIZE,
 					"unknown attribute \"%s\" discarded",
 					pal->al_name);
 				log_err(-1, __func__, log_buffer);
@@ -482,7 +482,7 @@ make_pbs_list_attr_db(
 
 		amt = pal->al_tsize - sizeof(svrattrl);
 		if (amt < 1) {
-			sprintf(log_buffer, "Invalid attr list size in DB");
+			snprintf(log_buffer,LOG_BUF_SIZE, "Invalid attr list size in DB");
 			log_err(-1, __func__, log_buffer);
 			(void)free(pal);
 			goto err;

@@ -62,7 +62,7 @@
 int
 pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 {
-	sprintf(conn->conn_sql, "insert into "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into "
 		"pbs.scheduler( "
 		"sched_name, "
 		"sched_sv_name, "
@@ -75,7 +75,7 @@ pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 		return -1;
 
 	/* rewrite all attributes for a FULL update */
-	sprintf(conn->conn_sql, "update pbs.scheduler set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.scheduler set "
 		"sched_sv_name = $2, "
 		"sched_savetm = localtimestamp, "
 		"attributes = hstore($3::text[]) "
@@ -83,14 +83,14 @@ pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_UPDATE_SCHED_FULL, conn->conn_sql, 3) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.scheduler set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.scheduler set "
 		"sched_savetm = localtimestamp,"
 		"attributes = attributes - hstore($2::text[]) "
 		"where sched_name = $1");
 	if (pg_prepare_stmt(conn, STMT_REMOVE_SCHEDATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"sched_name, "
 		"sched_sv_name, "
 		"extract(epoch from sched_savetm)::bigint as sched_savetm, "
@@ -102,7 +102,7 @@ pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_SCHED, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"sched_name, "
 		"sched_sv_name, "
 		"extract(epoch from sched_savetm)::bigint as sched_savetm, "
@@ -113,7 +113,7 @@ pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_SCHED_ALL, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.scheduler where sched_name = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.scheduler where sched_name = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_SCHED, conn->conn_sql, 1) != 0)
 		return -1;
 

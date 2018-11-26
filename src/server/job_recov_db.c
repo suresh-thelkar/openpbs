@@ -435,7 +435,6 @@ job_save_db(job *pjob, int updatetype)
 			if (updatetype == SAVEJOB_NEW && strstr(conn->conn_db_err, "duplicate key value")) {
 				/* new job has a jobid clash, allow retry with a new jobid */
 				pbs_db_reset_obj(&obj);
-				/*pjob->ji_modifyct = 0;*/
 				if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
 					goto db_err;
 
@@ -482,7 +481,6 @@ job *
 job_recov_db_spl(pbs_db_job_info_t *dbjob)
 {
 	job		*pj;
-	/*pbs_db_obj_info_t obj;*/
 	pbs_db_conn_t *conn = svr_db_conn;
 
 	pj = job_alloc();	/* allocate & initialize job structure space */
@@ -491,7 +489,7 @@ job_recov_db_spl(pbs_db_job_info_t *dbjob)
 	}
 
 	if (db_to_svr_job(pj, dbjob) != 0)
-			goto db_err;
+		goto db_err;
 
 	if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
 		goto db_err;
@@ -501,7 +499,7 @@ db_err:
 	if (pj)
 		job_free(pj);
 
-	sprintf(log_buffer, "Failed to recover job %s", dbjob->ji_jobid);
+	snprintf(log_buffer, LOG_BUF_SIZE, "Failed to recover job %s", dbjob->ji_jobid);
 	log_err(-1, "job_recov", log_buffer);
 
 	return (NULL);
@@ -550,11 +548,6 @@ job_recov_db(char *jid)
 db_err:
 	if (pj)
 		job_free(pj);
-
-	/*
-	sprintf(log_buffer, "Failed to recover job %s", jid);
-	log_err(-1, "job_recov", log_buffer);
-	*/
 
 	(void) pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
 	return (NULL);

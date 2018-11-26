@@ -94,7 +94,8 @@ convert_array_to_db_attr_list(char *raw_array, pbs_db_attr_list_t *attr_list)
 	int i, j;
 	int rows;
 	char *p;
-	char *attr_name, *attr_value;
+	char *attr_name;
+	char *attr_value;
 	pbs_db_attr_info_t *attrs = NULL;
 	struct pg_array *array = (struct pg_array *) raw_array;
 	struct str_data *val = (struct str_data *)(raw_array + sizeof(struct pg_array));

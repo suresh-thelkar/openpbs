@@ -63,7 +63,7 @@
 int
 pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
 {
-	sprintf(conn->conn_sql, "insert into pbs.queue("
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into pbs.queue("
 		"qu_name, "
 		"qu_sv_name, "
 		"qu_type, "
@@ -78,7 +78,7 @@ pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
 		return -1;
 
 	/* rewrite all attributes for FULL update */
-	sprintf(conn->conn_sql, "update pbs.queue set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.queue set "
 			"qu_sv_name = $2, "
 			"qu_type = $3, "
 			"qu_mtime = localtimestamp, "
@@ -88,14 +88,14 @@ pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
 		return -1;
 
 
-	sprintf(conn->conn_sql, "update pbs.queue set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.queue set "
 		"qu_mtime = localtimestamp,"
 		"attributes = attributes - hstore($2::text[]) "
 		"where qu_name = $1");
 	if (pg_prepare_stmt(conn, STMT_REMOVE_QUEATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select qu_name, "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select qu_name, "
 			"qu_sv_name, "
 			"qu_type, "
 			"extract(epoch from qu_ctime)::bigint as qu_ctime, "
@@ -106,7 +106,7 @@ pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_QUE, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 			"qu_name, "
 			"qu_sv_name, "
 			"qu_type, "
@@ -117,7 +117,7 @@ pg_db_prepare_que_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_FIND_QUES_ORDBY_CREATTM, conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.queue where qu_name = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.queue where qu_name = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_QUE, conn->conn_sql, 1) != 0)
 		return -1;
 

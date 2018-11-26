@@ -114,9 +114,8 @@ svr_to_db_que(pbs_queue *pque, pbs_db_que_info_t *pdbque, int updatetype)
 	pdbque->qu_type = pque->qu_qs.qu_type;
 
 	if (updatetype != PBS_UPDATE_DB_QUICK) {
-		if ((encode_attr_db(que_attr_def,
-				pque->qu_attr,
-				(int)QA_ATR_LAST, &pdbque->attr_list, 1)) != 0) /* encode all attributes */
+		if ((encode_attr_db(que_attr_def, pque->qu_attr,
+			(int)QA_ATR_LAST, &pdbque->attr_list, 1)) != 0) /* encode all attributes */
 			return -1;
 	}
 
@@ -143,8 +142,7 @@ db_to_svr_que(pbs_queue *pque, pbs_db_que_info_t *pdbque)
 	pque->qu_qs.qu_mtime = pdbque->qu_mtime;
 
 	if ((decode_attr_db(pque, &pdbque->attr_list, que_attr_def,
-				pque->qu_attr,
-				(int) QA_ATR_LAST, 0)) != 0)
+		pque->qu_attr, (int) QA_ATR_LAST, 0)) != 0)
 		return -1;
 
 	return 0;
@@ -182,7 +180,7 @@ que_save_db(pbs_queue *pque, int mode)
 		savetype = PBS_INSERT_DB;
 
 	if (pbs_db_save_obj(conn, &obj, savetype) != 0)
-			goto db_err;
+		goto db_err;
 
 	pbs_db_reset_obj(&obj);
 

@@ -63,7 +63,7 @@
 int
 pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 {
-	sprintf(conn->conn_sql, "insert into pbs.job ("
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into pbs.job ("
 		"ji_jobid,"
 		"ji_sv_name,"
 		"ji_state,"
@@ -101,7 +101,7 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_INSERT_JOB, conn->conn_sql, 25) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.job set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.job set "
 		"ji_sv_name = $2,"
 		"ji_state = $3,"
 		"ji_substate = $4,"
@@ -131,14 +131,14 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_UPDATE_JOB, conn->conn_sql, 25) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.job set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.job set "
 		"ji_savetm = localtimestamp,"
 		"attributes = attributes - hstore($2::text[]) "
 		"where ji_jobid = $1");
 	if (pg_prepare_stmt(conn, STMT_REMOVE_JOBATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.job set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.job set "
 		"ji_sv_name = $2,"
 		"ji_state = $3,"
 		"ji_substate = $4,"
@@ -167,7 +167,7 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_UPDATE_JOB_QUICK, conn->conn_sql, 24) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"ji_jobid,"
 		"ji_sv_name,"
 		"ji_state,"
@@ -206,7 +206,7 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	 * for details:
 	 * http://www.postgresql.org/docs/8.3/static/functions-string.html
 	 */
-	sprintf(conn->conn_sql, "insert into "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into "
 		"pbs.job_scr (ji_jobid, script) "
 		"values "
 		"($1, encode($2, 'escape'))");
@@ -221,13 +221,13 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	 * Refer to the following postgres link for details:
 	 * http://www.postgresql.org/docs/8.3/static/functions-string.html
 	 */
-	sprintf(conn->conn_sql, "select decode(script, 'escape')::bytea as script "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select decode(script, 'escape')::bytea as script "
 		"from pbs.job_scr "
 		"where ji_jobid = $1");
 	if (pg_prepare_stmt(conn, STMT_SELECT_JOBSCR, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"ji_jobid,"
 		"ji_sv_name,"
 		"ji_state,"
@@ -259,7 +259,7 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_FINDJOBS_ORDBY_QRANK, conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"ji_jobid,"
 		"ji_sv_name,"
 		"ji_state,"
@@ -293,11 +293,11 @@ pg_db_prepare_job_sqls(pbs_db_conn_t *conn)
 		conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.job where ji_jobid = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.job where ji_jobid = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_JOB, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.job_scr where ji_jobid = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.job_scr where ji_jobid = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_JOBSCR, conn->conn_sql, 1) != 0)
 		return -1;
 

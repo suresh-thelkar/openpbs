@@ -63,7 +63,7 @@
 int
 pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 {
-	sprintf(conn->conn_sql, "insert into pbs.node("
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into pbs.node("
 		"nd_name, "
 		"nd_index, "
 		"mom_modtime, "
@@ -82,7 +82,7 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 		return -1;
 
 	/* in case of nodes do not use || with existing attributes, since we re-write all attributes */
-	sprintf(conn->conn_sql, "update pbs.node set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.node set "
 		"nd_index = $2, "
 		"mom_modtime = $3, "
 		"nd_hostname = $4, "
@@ -95,21 +95,21 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_UPDATE_NODE, conn->conn_sql, 8) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.node set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.node set "
 		"nd_savetm = localtimestamp,"
 		"attributes = delete(attributes, $2::text[]) "
 		"where nd_name = $1");
 	if (pg_prepare_stmt(conn, STMT_REMOVE_NODEATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.node set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.node set "
 			"nd_savetm = localtimestamp,"
 			"attributes = attributes || hstore($2::text[]) "
 			"where nd_name = $1");
 	if (pg_prepare_stmt(conn, STMT_UPDATE_NODEATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"nd_name, "
 		"nd_index, "
 		"mom_modtime, "
@@ -123,7 +123,7 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_NODE, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"nd_name, "
 		"nd_index, "
 		"mom_modtime, "
@@ -136,7 +136,7 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_FIND_NODES_ORDBY_CREATTM, conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 #ifdef NAS /* localmod 079 */
 		"n.nd_name, "
 		"n.mom_modtime, "
@@ -159,18 +159,18 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_FIND_NODES_ORDBY_INDEX, conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.node where nd_name = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.node where nd_name = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_NODE, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"mit_time, "
 		"mit_gen "
 		"from pbs.mominfo_time ");
 	if (pg_prepare_stmt(conn, STMT_SELECT_MOMINFO_TIME, conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "insert into pbs.mominfo_time("
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into pbs.mominfo_time("
 		"mit_time, "
 		"mit_gen) "
 		"values "
@@ -178,7 +178,7 @@ pg_db_prepare_node_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_INSERT_MOMINFO_TIME, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.mominfo_time set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.mominfo_time set "
 		"mit_time = $1, "
 		"mit_gen = $2 ");
 	if (pg_prepare_stmt(conn, STMT_UPDATE_MOMINFO_TIME, conn->conn_sql, 2) != 0)

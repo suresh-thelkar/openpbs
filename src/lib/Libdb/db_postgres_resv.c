@@ -62,7 +62,7 @@
 int
 pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
 {
-	sprintf(conn->conn_sql, "insert into pbs.resv ("
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "insert into pbs.resv ("
 		"ri_resvID, "
 		"ri_sv_name, "
 		"ri_queue, "
@@ -89,7 +89,7 @@ pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_INSERT_RESV, conn->conn_sql, 17) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.resv set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.resv set "
 		"ri_sv_name = $2, "
 		"ri_queue = $3, "
 		"ri_state = $4, "
@@ -111,14 +111,14 @@ pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_UPDATE_RESV, conn->conn_sql, 17) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "update pbs.resv set "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "update pbs.resv set "
 		"ri_savetm = localtimestamp,"
 		"attributes = attributes - hstore($2::text[]) "
 		"where ri_resvID = $1");
 	if (pg_prepare_stmt(conn, STMT_REMOVE_RESVATTRS, conn->conn_sql, 2) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"ri_resvID, "
 		"ri_sv_name, "
 		"ri_queue, "
@@ -142,7 +142,7 @@ pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_RESV, conn->conn_sql, 1) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "select "
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 		"ri_resvID, "
 		"ri_sv_name, "
 		"ri_queue, "
@@ -168,7 +168,7 @@ pg_db_prepare_resv_sqls(pbs_db_conn_t *conn)
 		conn->conn_sql, 0) != 0)
 		return -1;
 
-	sprintf(conn->conn_sql, "delete from pbs.resv where ri_resvid = $1");
+	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "delete from pbs.resv where ri_resvid = $1");
 	if (pg_prepare_stmt(conn, STMT_DELETE_RESV, conn->conn_sql, 1) != 0)
 		return -1;
 
