@@ -239,7 +239,7 @@ pg_db_load_que(pbs_db_conn_t *conn, pbs_db_obj_info_t *obj)
 	SET_PARAM_STR(conn, pq->qu_name, 0);
 
 	if ((rc = pg_db_query(conn, STMT_SELECT_QUE, 1, &res)) != 0)
-			return rc;
+		return rc;
 
 	rc = load_que(res, pq, 0);
 

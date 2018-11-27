@@ -62,14 +62,14 @@ INSERT INTO pbs.info values('1.4.0'); /* schema version */
  * Table pbs.server holds server instance information
  */
 CREATE TABLE pbs.server (
-    sv_name			TEXT		NOT NULL, /* the server id value */
+    sv_name		TEXT		NOT NULL, /* the server id value */
     sv_hostname		TEXT		NOT NULL, /* the actual server hostname - can change */
     sv_numjobs		INTEGER		NOT NULL,
-    sv_numque			INTEGER		NOT NULL,
-    sv_jobidnumber		BIGINT		NOT NULL,
+    sv_numque		INTEGER		NOT NULL,
+    sv_jobidnumber	BIGINT		NOT NULL,
     sv_svraddr		BIGINT		NOT NULL,
     sv_svrport		INTEGER		NOT NULL,
-    sv_savetm			TIMESTAMP	NOT NULL,
+    sv_savetm		TIMESTAMP	NOT NULL,
     sv_creattm		TIMESTAMP	NOT NULL,
     attributes		hstore		NOT NULL DEFAULT '',	
     CONSTRAINT server_pk PRIMARY KEY (sv_name)

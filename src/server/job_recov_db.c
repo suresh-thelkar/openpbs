@@ -179,8 +179,8 @@ svr_to_db_job(job *pjob, pbs_db_job_info_t *dbjob, int updatetype)
 
 	if (updatetype != PBS_UPDATE_DB_QUICK) {
 		if ((encode_attr_db(job_attr_def,
-					pjob->ji_wattr,
-					(int)JOB_ATR_LAST, &dbjob->attr_list, 0)) != 0)
+			pjob->ji_wattr,
+			(int)JOB_ATR_LAST, &dbjob->attr_list, 0)) != 0)
 			return -1;
 	}
 
@@ -334,8 +334,8 @@ db_to_svr_resv(resc_resv *presv, pbs_db_resv_info_t *pdresv)
 	presv->ri_qs.ri_type = pdresv->ri_type;
 
 	if ((decode_attr_db(presv, &pdresv->attr_list, resv_attr_def,
-				presv->ri_wattr,
-				(int) RESV_ATR_LAST, (int) RESV_ATR_UNKN)) != 0)
+		presv->ri_wattr,
+		(int) RESV_ATR_LAST, (int) RESV_ATR_UNKN)) != 0)
 		return -1;
 
 	return 0;

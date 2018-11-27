@@ -91,7 +91,8 @@ struct pg_array {
 int
 convert_array_to_db_attr_list(char *raw_array, pbs_db_attr_list_t *attr_list)
 {
-	int i, j;
+	int i;
+	int j;
 	int rows;
 	char *p;
 	char *attr_name;

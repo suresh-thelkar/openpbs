@@ -585,10 +585,10 @@ extern int action_queue_partition(attribute *pattr, void *pobj, int actmode);
 extern int action_resc_resv(attribute *pattr, void *pobject, int actmode);
 
 /* Functions used to save and recover the attributes from the database */
-extern int encode_attr_db(struct attribute_def *padef, struct attribute *pattr, int numattr,
-		pbs_db_attr_list_t *attr_list, int all);
-extern int decode_attr_db(void *parent, pbs_db_attr_list_t *attr_list, struct attribute_def *padef,
-		struct attribute *pattr, int limit, int unknown);
+extern int encode_attr_db(struct attribute_def *padef, struct attribute *pattr,
+	int numattr, pbs_db_attr_list_t *attr_list, int all);
+extern int decode_attr_db(void *parent, pbs_db_attr_list_t *attr_list,
+	struct attribute_def *padef, struct attribute *pattr, int limit, int unknown);
 
 extern int is_attr(int, char *, int);
 
