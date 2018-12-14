@@ -109,8 +109,6 @@ svr_to_db_que(pbs_queue *pque, pbs_db_que_info_t *pdbque, int updatetype)
 {
 	pdbque->qu_name[sizeof(pdbque->qu_name) - 1] = '\0';
 	strncpy(pdbque->qu_name, pque->qu_qs.qu_name, sizeof(pdbque->qu_name));
-	pdbque->qu_sv_name[sizeof(pdbque->qu_sv_name) - 1] = '\0';
-	strncpy(pdbque->qu_sv_name, pbs_server_id, sizeof(pdbque->qu_sv_name));
 	pdbque->qu_type = pque->qu_qs.qu_type;
 
 	if (updatetype != PBS_UPDATE_DB_QUICK) {

@@ -1674,14 +1674,6 @@ try_db_again:
 	/* Python world, which are made  complete after call to pbsd_init()! */
 	pbs_python_ext_quick_start_interpreter();
 
-	/* get/set the current instance's svrid */
-	if (chk_and_update_db_svrhost() != 0) {
-		log_err(-1, msg_daemonname, "Failed to retrieve/set pbs server id");
-		pbs_python_ext_quick_shutdown_interpreter();
-		stop_db();
-		return (3);
-	}
-
 	if (server_init_type == RECOV_UPDATEDB) {
 		if (svr_migrate_data() != 0) {
 			stop_db();
