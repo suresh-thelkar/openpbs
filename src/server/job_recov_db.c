@@ -104,7 +104,6 @@
 
 #ifndef PBS_MOM
 extern pbs_db_conn_t	*svr_db_conn;
-extern char *pbs_server_id;
 #endif
 
 #ifdef NAS /* localmod 005 */

@@ -220,7 +220,6 @@ extern char *msg_internal;
 extern char *msg_job_prov_failed;
 extern char *path_hooks_workdir;
 extern char *path_priv;
-extern char *pbs_server_id;
 extern char *pbs_server_name;
 
 char *path_prov_track;

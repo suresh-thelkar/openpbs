@@ -264,7 +264,6 @@ unsigned int	pbs_server_port_dis;
 char	       *pbs_server_name;
 char		server_name[PBS_MAXSERVERNAME+1]; /* host_name[:service|port] */
 char		server_host[PBS_MAXHOSTNAME+1];	  /* host_name of this svr */
-char	       *pbs_server_id;
 int		reap_child_flag = 0;
 time_t		secondary_delay = 30;
 struct server	server;		/* the server structure */
@@ -1060,8 +1059,6 @@ main(int argc, char **argv)
 		log_err(-1, "pbsd_main", "Unable to get server host name");
 		return (-1);
 	}
-
-	pbs_server_id = NULL;
 
 	pbs_server_addr = get_hostaddr(server_host);
 	pbs_mom_addr = pbs_server_addr;		/* assume on same host */

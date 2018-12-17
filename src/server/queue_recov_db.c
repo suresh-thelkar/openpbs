@@ -76,7 +76,6 @@
 
 
 #ifndef PBS_MOM
-extern char *pbs_server_id;
 extern pbs_db_conn_t	*svr_db_conn;
 #endif
 
