@@ -141,7 +141,7 @@ extern	void unset_job_history_duration(void);
 extern	void unset_max_job_sequence_id(void);
 extern	void force_qsub_daemons_update(void);
 extern  void unset_node_fail_requeue(void);
-extern pbs_sched *sched_alloc(char *sched_name);
+extern pbs_sched *sched_alloc(char *sched_name, int append);
 extern void sched_free(pbs_sched *psched);
 extern int sched_delete(pbs_sched *psched);
 
@@ -3718,7 +3718,7 @@ mgr_sched_create(struct batch_request *preq)
 		return;
 	}
 
-	psched = sched_alloc(preq->rq_ind.rq_manager.rq_objname);
+	psched = sched_alloc(preq->rq_ind.rq_manager.rq_objname, 1);
 	if (!psched)
 		req_reject(PBSE_SYSTEM, 0, preq);
 
