@@ -236,6 +236,8 @@ svr_to_db_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched, int updatet
 static int
 db_to_svr_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched)
 {
+	/* Following code is for the time being only */
+	strcpy(ps->sc_name, pdbsched->sched_name);
 	/* since we dont need the sched_name and sched_sv_name free here */
 	if ((decode_attr_db(ps, &pdbsched->attr_list, sched_attr_def,
 		ps->sch_attr,
@@ -384,8 +386,10 @@ static char *schedemsg = "unable to save scheddb ";
  * */
 
 pbs_sched *
-sched_recov_db(char *sname)
+sched_recov_db(char *partition)
 {
+	char *sname = "new";
+	/* remove the above just for experimental purpose */
 	pbs_sched		*ps;
 	pbs_db_sched_info_t	dbsched;
 	pbs_db_obj_info_t	obj;
@@ -394,6 +398,7 @@ sched_recov_db(char *sname)
 	obj.pbs_db_obj_type = PBS_DB_SCHED;
 	obj.pbs_db_un.pbs_db_sched = &dbsched;
 
+
 	ps = sched_alloc(sname);  /* allocate & init sched structure space */
 	if (ps == NULL) {
 		log_err(-1, "sched_recov", "sched_alloc failed");
@@ -401,8 +406,12 @@ sched_recov_db(char *sname)
 	}
 
 	/* load sched */
-	dbsched.sched_name[sizeof(dbsched.sched_name) - 1] = '\0';
-	strncpy(dbsched.sched_name, sname, sizeof(dbsched.sched_name));
+	/*dbsched.sched_name[sizeof(dbsched.sched_name) - 1] = '\0';
+	strncpy(dbsched.sched_name, sname, sizeof(dbsched.sched_name));*/
+
+	dbsched.partition_name[sizeof(dbsched.partition_name) - 1] = '\0';
+	/*strncpy(dbsched.partition_name, partition, sizeof(dbsched.partition_name));*/
+	snprintf(dbsched.partition_name, sizeof(dbsched.partition_name), "%%%s%%", partition);
 
 	/* read in job fixed sub-structure */
 	if (pbs_db_load_obj(conn, &obj) != 0)

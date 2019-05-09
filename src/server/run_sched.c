@@ -228,6 +228,12 @@ find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched)
 				}
 			}
 		}
+		if (psched == NULL) {
+			/* try recovering from db */
+			*target_sched = recov_sched_part_db(pq->qu_attr[QA_ATR_partition].at_val.at_str);
+			return 1;
+
+		}
 	} else {
 		*target_sched = dflt_scheduler;
 		return 1;
@@ -620,4 +626,51 @@ set_scheduler_flag(int flag, pbs_sched *psched)
 			break;
 	}
 
+}
+
+pbs_sched *
+recov_sched_part_db(char *partition)
+{
+	pbs_db_sched_info_t dbsched;
+	pbs_db_obj_info_t	obj;
+	void *state = NULL;
+	int rc;
+	pbs_sched *psched;
+	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
+
+	/* start a transaction */
+	if (pbs_db_begin_trx(conn, 0, 0) != 0)
+		return NULL;
+
+	obj.pbs_db_obj_type = PBS_DB_SCHED;
+	obj.pbs_db_un.pbs_db_sched = &dbsched;
+
+	state = pbs_db_cursor_init(conn, &obj, NULL);
+	if (state == NULL) {
+		snprintf(log_buffer, LOG_BUF_SIZE, "%s", (char *) conn->conn_db_err);
+		log_err(-1, "pbsd_init", log_buffer);
+		pbs_db_cursor_close(conn, state);
+		(void) pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
+		return NULL;
+	}
+
+	/*count = pbs_db_get_rowcount(state);*/
+	while ((rc = pbs_db_cursor_next(conn, state, &obj)) == 0) {
+		/* recover sched */
+		if ((psched = sched_recov_db(partition)) != NULL) {
+			if(!strncmp(dbsched.sched_name, PBS_DFLT_SCHED_NAME,
+				strlen(PBS_DFLT_SCHED_NAME))) {
+				dflt_scheduler = psched;
+			}
+		}
+		pbs_db_reset_obj(&obj);
+		break;
+	}
+	pbs_db_cursor_close(conn, state);
+
+	/* end the transaction */
+	if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
+		return NULL;
+
+	return psched;
 }

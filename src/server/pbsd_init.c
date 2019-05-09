@@ -233,6 +233,7 @@ static void  call_log_license(struct work_task *);
 extern int create_resreleased(job *pjob);
 
 extern pbs_sched *sched_alloc(char *sched_name);
+
 /* private data */
 
 #define CHANGE_STATE 1
@@ -406,7 +407,7 @@ pbsd_init(int type)
 	pbs_db_conn_t	*conn = (pbs_db_conn_t *) svr_db_conn;
 	char *buf = NULL;
 	int buf_len = 0;
-	pbs_sched *psched;
+	/*pbs_sched *psched;*/
 
 #ifndef WIN32
 #ifdef  RLIMIT_CORE
@@ -726,17 +727,21 @@ pbsd_init(int type)
 
 		count = pbs_db_get_rowcount(state);
 		if (count <= 0) {
-			/* no schedulers found in DB*/
+			/*no schedulers found in DB*/
 			pbs_db_cursor_close(conn, state);
 			(void) pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
-			/* No Schedulers found in DB */
-			/* Create and save default to DB*/
+			/*No Schedulers found in DB
+			   Create and save default to DB */
 			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
 			set_sched_default(dflt_scheduler, 0, 0);
 			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
 		} else {
+			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
+			set_sched_default(dflt_scheduler, 0, 0);
+		}
+		/*else {
 			while ((rc = pbs_db_cursor_next(conn, state, &obj)) == 0) {
-				/* recover sched */
+				//recover sched
 				if ((psched = sched_recov_db(dbsched.sched_name)) != NULL) {
 					if(!strncmp(dbsched.sched_name, PBS_DFLT_SCHED_NAME,
 						strlen(PBS_DFLT_SCHED_NAME))) {
@@ -744,7 +749,7 @@ pbsd_init(int type)
 
 					}
 					if (pbs_conf.pbs_use_tcp == 0) {
-						/* check if throughput mode is visible in non-TPP mode, if so make it invisible */
+						// check if throughput mode is visible in non-TPP mode, if so make it invisible
 						psched->sch_attr[SCHED_ATR_throughput_mode].at_flags = 0;
 					}
 					psched->pbs_scheduler_port = psched->sch_attr[SCHED_ATR_sched_port].at_val.at_long;
@@ -758,10 +763,10 @@ pbsd_init(int type)
 			if (server.sv_attr[SRV_ATR_scheduling].at_val.at_long)
 				set_scheduler_flag(SCH_SCHEDULE_ETE_ON, NULL);
 
-			/* end the transaction */
+			//end the transaction
 			if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
 				return (-1);
-		}
+		}*/
 	} else {	/* init type is "create" */
 		if (rc == 0) {		/* server was loaded */
 #ifdef WIN32
