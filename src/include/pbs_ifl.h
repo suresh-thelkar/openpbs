@@ -636,7 +636,7 @@ DECLDIR struct batch_status *pbs_statque(int, char *, struct attrl *, char *);
 
 DECLDIR struct batch_status *pbs_statserver(int, struct attrl *, char *);
 
-DECLDIR struct batch_status *pbs_statsched(int, struct attrl *, char *);
+DECLDIR struct batch_status *pbs_statsched(int, char *, struct attrl *, char *);
 
 DECLDIR struct batch_status *pbs_stathost(int, char *, struct attrl *, char *);
 
@@ -732,7 +732,7 @@ extern struct batch_status *pbs_statque(int, char *, struct attrl *, char *);
 
 extern struct batch_status *pbs_statserver(int, struct attrl *, char *);
 
-extern struct batch_status *pbs_statsched(int, struct attrl *, char *);
+extern struct batch_status *pbs_statsched(int, char *, struct attrl *, char *);
 
 extern struct batch_status *pbs_stathost(int, char *, struct attrl *, char *);
 
@@ -787,7 +787,7 @@ extern struct batch_status *(*pfn_pbs_statjob)(int, char *, struct attrl *, char
 extern struct batch_status *(*pfn_pbs_selstat)(int, struct attropl *, struct attrl *, char *);
 extern struct batch_status *(*pfn_pbs_statque)(int, char *, struct attrl *, char *);
 extern struct batch_status *(*pfn_pbs_statserver)(int, struct attrl *, char *);
-extern struct batch_status *(*pfn_pbs_statsched)(int, struct attrl *, char *);
+extern struct batch_status *(*pfn_pbs_statsched)(int, char *, struct attrl *, char *);
 extern struct batch_status *(*pfn_pbs_stathost)(int, char *, struct attrl *, char *);
 extern struct batch_status *(*pfn_pbs_statnode)(int, char *, struct attrl *, char *);
 extern struct batch_status *(*pfn_pbs_statvnode)(int, char *, struct attrl *, char *);
