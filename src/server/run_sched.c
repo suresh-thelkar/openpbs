@@ -92,6 +92,9 @@ int scheduler_jobs_stat = 0;	/* set to 1 once scheduler queried jobs in a cycle*
 extern int svr_unsent_qrun_req;
 #define PRIORITY_CONNECTION 1
 
+pbs_net_t		pbs_scheduler_addr;
+unsigned int		pbs_scheduler_port;
+
 /**
  * @brief
  * 		am_jobs - array of pointers to jobs which were moved or which had certain
@@ -235,7 +238,19 @@ find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched)
 
 		}
 	} else {
-		*target_sched = dflt_scheduler;
+		if (dflt_scheduler) {
+			*target_sched = dflt_scheduler;
+			return 1;
+		}
+		dflt_scheduler = *target_sched = recov_sched_part_db(NULL);
+		if (!dflt_scheduler) {
+			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
+			set_sched_default(dflt_scheduler, 0, 0);
+			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
+			*target_sched = dflt_scheduler;
+		}
+		dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
+		dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
 		return 1;
 	}
 	return 0;

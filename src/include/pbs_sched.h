@@ -123,6 +123,8 @@ extern pbs_sched *find_sched(char *sched_name);
 extern pbs_sched *recov_sched_part_db(char *partition);
 extern pbs_sched *sched_alloc(char *sched_name);
 extern int db_to_svr_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched);
+extern pbs_net_t pbs_scheduler_addr;
+extern unsigned int pbs_scheduler_port;
 
 #ifdef	__cplusplus
 }

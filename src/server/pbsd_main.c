@@ -886,9 +886,6 @@ main(int argc, char **argv)
 	int 			db_stop_counts = 0;
 	int 			db_stop_email_sent = 0;
 
-	pbs_net_t		pbs_scheduler_addr;
-	unsigned int		pbs_scheduler_port;
-
 	extern int		optind;
 	extern char		*optarg;
 	extern char		*msg_svrdown;	/* log message */
@@ -1925,8 +1922,6 @@ try_db_again:
 		(void)set_task(WORK_Timed, time_now, primary_handshake, NULL);
 
 	}
-	dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
-	dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
 
 #ifdef WIN32
 	sprintf(log_buffer, msg_startup2, getpid(), pbs_server_port_dis,

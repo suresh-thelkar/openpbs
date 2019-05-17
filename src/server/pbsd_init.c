@@ -705,14 +705,6 @@ pbsd_init(int type)
 			svr_attr_def[(int)SRV_ATR_Comment].at_free(
 				&server.sv_attr[(int)SRV_ATR_Comment]);
 		}
-
-		/* now do sched db */
-		dflt_scheduler = recov_sched_part_db(NULL);
-		if (!dflt_scheduler) {
-			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
-			set_sched_default(dflt_scheduler, 0, 0);
-			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
-		}
 	} else {	/* init type is "create" */
 		if (rc == 0) {		/* server was loaded */
 #ifdef WIN32
