@@ -631,12 +631,17 @@ set_scheduler_flag(int flag, pbs_sched *psched)
 pbs_sched *
 recov_sched_part_db(char *partition)
 {
-	pbs_db_sched_info_t dbsched;
-	pbs_db_obj_info_t	obj;
-	void *state = NULL;
 	int rc;
-	pbs_sched *psched;
+	pbs_db_sched_info_t dbsched;
+	pbs_db_obj_info_t obj;
+	pbs_sched *ps = NULL;
+	char *sname = "new";
+	pbs_db_query_options_t qry_options = {0};
+	void *state = NULL;
 	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
+
+	if (partition != NULL)
+		qry_options.flags = 1;
 
 	/* start a transaction */
 	if (pbs_db_begin_trx(conn, 0, 0) != 0)
@@ -645,7 +650,14 @@ recov_sched_part_db(char *partition)
 	obj.pbs_db_obj_type = PBS_DB_SCHED;
 	obj.pbs_db_un.pbs_db_sched = &dbsched;
 
-	state = pbs_db_cursor_init(conn, &obj, NULL);
+
+	dbsched.partition_name[0] = '\0';
+
+	if (partition != NULL)
+		snprintf(dbsched.partition_name, sizeof(dbsched.partition_name), "%%%s%%", partition);
+
+
+	state = pbs_db_cursor_init(conn, &obj, &qry_options);
 	if (state == NULL) {
 		snprintf(log_buffer, LOG_BUF_SIZE, "%s", (char *) conn->conn_db_err);
 		log_err(-1, "pbsd_init", log_buffer);
@@ -654,17 +666,22 @@ recov_sched_part_db(char *partition)
 		return NULL;
 	}
 
-	/*count = pbs_db_get_rowcount(state);*/
-	while ((rc = pbs_db_cursor_next(conn, state, &obj)) == 0) {
+	if ((rc = pbs_db_cursor_next(conn, state, &obj)) == 0) {
 		/* recover sched */
-		if ((psched = sched_recov_db(partition)) != NULL) {
-			if(!strncmp(dbsched.sched_name, PBS_DFLT_SCHED_NAME,
-				strlen(PBS_DFLT_SCHED_NAME))) {
-				dflt_scheduler = psched;
-			}
+		ps = sched_alloc(sname);  /* allocate & init sched structure space */
+		if (ps == NULL) {
+			log_err(-1, "sched_recov", "sched_alloc failed");
+			return NULL;
 		}
+
+		/* read in job fixed sub-structure */
+		if (pbs_db_load_obj(conn, &obj) != 0)
+			goto db_err;
+
+		if (db_to_svr_sched(ps, &dbsched) != 0)
+			goto db_err;
+
 		pbs_db_reset_obj(&obj);
-		break;
 	}
 	pbs_db_cursor_close(conn, state);
 
@@ -672,5 +689,35 @@ recov_sched_part_db(char *partition)
 	if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
 		return NULL;
 
-	return psched;
+	/* all done recovering the sched */
+	return (ps);
+
+db_err:
+	log_err(-1, __func__, "read of scheddb failed");
+	if (ps)
+		free(ps);
+	return NULL;
 }
+
+/**
+ * @brief
+ *	Load a database scheduler object from the scheduler object in server
+ *
+ * @param[out] ps - Address of the scheduler in pbs server
+ * @param[in]  pdbsched  - Address of the database scheduler object
+ *
+ */
+int
+db_to_svr_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched)
+{
+	/* Following code is for the time being only */
+	strcpy(ps->sc_name, pdbsched->sched_name);
+	/* since we dont need the sched_name and sched_sv_name free here */
+	if ((decode_attr_db(ps, &pdbsched->attr_list, sched_attr_def,
+		ps->sch_attr,
+		(int) SCHED_ATR_LAST, 0)) != 0)
+		return -1;
+
+	return 0;
+}
+

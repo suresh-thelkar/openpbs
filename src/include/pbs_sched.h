@@ -121,6 +121,8 @@ extern int find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched);
 extern pbs_sched *find_sched_from_sock(int sock);
 extern pbs_sched *find_sched(char *sched_name);
 extern pbs_sched *recov_sched_part_db(char *partition);
+extern pbs_sched *sched_alloc(char *sched_name);
+extern int db_to_svr_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched);
 
 #ifdef	__cplusplus
 }
