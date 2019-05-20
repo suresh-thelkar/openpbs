@@ -817,13 +817,24 @@ req_stat_sched(struct batch_request *preq)
 	preply->brp_choice = BATCH_REPLY_CHOICE_Status;
 	CLEAR_HEAD(preply->brp_un.brp_status);
 
-	for (psched = (pbs_sched *) GET_NEXT(svr_allscheds);
-			(psched != NULL);
-			psched = (pbs_sched *) GET_NEXT(psched->sc_link)
-		) {
-		rc = status_sched(psched, preq, &preply->brp_un.brp_status);
-		if (rc != 0) {
-			break;
+	psched = NULL;
+	if(strlen(preq->rq_ind.rq_status.rq_id) != 0) {
+		psched = find_scheduler(preq->rq_ind.rq_status.rq_id);
+		if(psched) {
+			rc = status_sched(psched, preq, &preply->brp_un.brp_status);
+		} else {
+			req_reject(PBSE_UNKSCHED, 0, preq);
+			return;
+		}
+	} else {
+		for (psched = (pbs_sched *) GET_NEXT(svr_allscheds);
+				(psched != NULL);
+				psched = (pbs_sched *) GET_NEXT(psched->sc_link)
+			) {
+			rc = status_sched(psched, preq, &preply->brp_un.brp_status);
+			if (rc != 0) {
+				break;
+			}
 		}
 	}
 

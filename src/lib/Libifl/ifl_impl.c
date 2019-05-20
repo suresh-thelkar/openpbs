@@ -588,6 +588,7 @@ pbs_statserver(int c, struct attrl *attrib, char *extend) {
  *	- Pass-through call to return the status of sched objects.
  *
  * @param[in] c - communication handle
+ * @param[in] id - object id
  * @param[in] attrib - pointer to attribute list
  * @param[in] extend - extend string for encoding req
  *
@@ -597,9 +598,10 @@ pbs_statserver(int c, struct attrl *attrib, char *extend) {
  *
  */
 struct batch_status *
-pbs_statsched(int c, struct attrl *attrib, char *extend) {
-	return (*pfn_pbs_statsched)(c, attrib, extend);
+pbs_statsched(int c, char *id, struct attrl *attrib, char *extend) {
+        return __pbs_statsched(c, id, attrib, extend);
 }
+
 
 /**
  * @brief

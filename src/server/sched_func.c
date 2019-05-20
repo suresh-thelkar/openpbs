@@ -650,3 +650,27 @@ action_sched_partition(attribute *pattr, void *pobj, int actmode)
 	return PBSE_NONE;
 }
 
+/**
+ * @brief find a scheduler
+ *
+ * @param[in]   sched_name - scheduler name
+ *
+ * @return      pbs_sched *
+ */
+
+pbs_sched *
+find_scheduler(char *sched_name)
+{
+        pbs_sched *psched = NULL;
+        if (!sched_name)
+                return NULL;
+        psched = (pbs_sched *) GET_NEXT(svr_allscheds);
+        while (psched != (pbs_sched *) 0) {
+                if (strcmp(sched_name, psched->sc_name) == 0)
+                        break;
+                psched = (pbs_sched *) GET_NEXT(psched->sc_link);
+        }
+        return (psched);
+}
+
+
