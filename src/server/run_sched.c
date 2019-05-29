@@ -68,6 +68,7 @@
 #include "pbs_sched.h"
 #include "queue.h"
 #include "pbs_share.h"
+#include "pbs_sched.h"
 
 
 /* Global Data */
@@ -209,40 +210,15 @@ find_assoc_sched_jid(char *jid, pbs_sched **target_sched)
 int
 find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched)
 {
-	pbs_sched *psched;
-
 	*target_sched = NULL;
 	if (pq == NULL)
 		return 0;
 
 	if (pq->qu_attr[QA_ATR_partition].at_flags & ATR_VFLAG_SET) {
-		attribute *part_attr;
-		for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
-			part_attr = &(psched->sch_attr[SCHED_ATR_partition]);
-			if (part_attr->at_flags & ATR_VFLAG_SET) {
-				int k;
-				for (k = 0; k < part_attr->at_val.at_arst->as_usedptr; k++) {
-					if ((part_attr->at_val.at_arst->as_string[k] != NULL)
-							&& (!strcmp(part_attr->at_val.at_arst->as_string[k],
-									pq->qu_attr[QA_ATR_partition].at_val.at_str))) {
-						*target_sched = psched;
-						return 1;
-					}
-				}
-			}
-		}
-		if (psched == NULL) {
-			/* try recovering from db */
-			*target_sched = recov_sched_part_db(pq->qu_attr[QA_ATR_partition].at_val.at_str);
-			return 1;
-
-		}
+		*target_sched = recov_sched_from_db(pq->qu_attr[QA_ATR_partition].at_val.at_str, NULL);
+		return 1;
 	} else {
-		if (dflt_scheduler) {
-			*target_sched = dflt_scheduler;
-			return 1;
-		}
-		dflt_scheduler = *target_sched = recov_sched_part_db(NULL);
+		dflt_scheduler = *target_sched = recov_sched_from_db(NULL, "default");
 		if (!dflt_scheduler) {
 			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
 			set_sched_default(dflt_scheduler, 0, 0);
@@ -528,6 +504,13 @@ scheduler_close(int sock)
 
 	set_sched_sock(-1, psched);
 
+	/*if (sched_delete(psched) == PBSE_OBJBUSY) {
+		snprintf(log_buffer, sizeof(log_buffer),
+				"Scheduler %s is busy", psched->sc_name);
+		log_err(PBSE_OBJBUSY, __func__, log_buffer);
+		return;
+	}*/
+
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;
 	scheduler_jobs_stat = 0;
@@ -644,7 +627,7 @@ set_scheduler_flag(int flag, pbs_sched *psched)
 }
 
 pbs_sched *
-recov_sched_part_db(char *partition)
+recov_sched_from_db(char *partition, char *sched_name)
 {
 	int rc;
 	pbs_db_sched_info_t dbsched;
@@ -657,6 +640,8 @@ recov_sched_part_db(char *partition)
 
 	if (partition != NULL)
 		qry_options.flags = 1;
+	else if (sched_name != NULL)
+		qry_options.flags = 2;
 
 	/* start a transaction */
 	if (pbs_db_begin_trx(conn, 0, 0) != 0)
@@ -666,10 +651,14 @@ recov_sched_part_db(char *partition)
 	obj.pbs_db_un.pbs_db_sched = &dbsched;
 
 
-	dbsched.partition_name[0] = '\0';
-
-	if (partition != NULL)
+	if (partition != NULL) {
+		dbsched.partition_name[0] = '\0';
 		snprintf(dbsched.partition_name, sizeof(dbsched.partition_name), "%%%s%%", partition);
+	}
+	else if (sched_name != NULL) {
+		dbsched.sched_name[0] = '\0';
+		snprintf(dbsched.sched_name, sizeof(dbsched.sched_name), "%s", sched_name);
+	}
 
 
 	state = pbs_db_cursor_init(conn, &obj, &qry_options);

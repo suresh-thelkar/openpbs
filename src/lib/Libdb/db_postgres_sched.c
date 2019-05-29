@@ -110,6 +110,7 @@ pg_db_prepare_sched_sqls(pbs_db_conn_t *conn)
 	if (pg_prepare_stmt(conn, STMT_SELECT_SCHED_PARTITION, conn->conn_sql, 1) != 0)
 		return -1;
 
+
 	snprintf(conn->conn_sql, MAX_SQL_LENGTH, "select "
 			"sched_name, "
 			"extract(epoch from sched_savetm)::bigint as sched_savetm, "
@@ -291,12 +292,16 @@ pg_db_find_sched(pbs_db_conn_t *conn, void *st, pbs_db_obj_info_t *obj,
 	if ((opts != NULL) && (opts->flags == 0)) {
 		strncpy(conn->conn_sql, STMT_SELECT_DFLT_SCHED, (MAX_SQL_LENGTH-1));
 		params = 0;
-	}
-	else if (opts->flags) {
+	} else if (opts->flags == 1) {
 		strncpy(conn->conn_sql, STMT_SELECT_SCHED_PARTITION, (MAX_SQL_LENGTH-1));
 		params = 1;
 		pbs_db_sched_info_t *psch = obj->pbs_db_un.pbs_db_sched;
 		SET_PARAM_STR(conn, psch->partition_name, 0);
+	} else if (opts->flags == 2) {
+		strncpy(conn->conn_sql, STMT_SELECT_SCHED, (MAX_SQL_LENGTH-1));
+		params = 1;
+		pbs_db_sched_info_t *psch = obj->pbs_db_un.pbs_db_sched;
+		SET_PARAM_STR(conn, psch->sched_name, 0);
 	}
 
 	conn->conn_sql[MAX_SQL_LENGTH-1] = '\0';
