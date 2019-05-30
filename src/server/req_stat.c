@@ -819,9 +819,11 @@ req_stat_sched(struct batch_request *preq)
 
 	psched = NULL;
 	if(strlen(preq->rq_ind.rq_status.rq_id) != 0) {
-		/*psched = recov_sched_from_db(NULL,preq->rq_ind.rq_status.rq_id);*/
-		psched = find_scheduler(preq->rq_ind.rq_status.rq_id);
+		psched = recov_sched_from_db(NULL,preq->rq_ind.rq_status.rq_id);
+		/*psched = find_scheduler(preq->rq_ind.rq_status.rq_id);*/
 		if(psched) {
+			if (strcmp(psched->sc_name, "default") == 0)
+				dflt_scheduler = psched;
 			rc = status_sched(psched, preq, &preply->brp_un.brp_status);
 		} else {
 			req_reject(PBSE_UNKSCHED, 0, preq);

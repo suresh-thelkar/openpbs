@@ -220,7 +220,7 @@ find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched)
 	} else {
 		dflt_scheduler = *target_sched = recov_sched_from_db(NULL, "default");
 		if (!dflt_scheduler) {
-			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
+			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
 			set_sched_default(dflt_scheduler, 0, 0);
 			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
 			*target_sched = dflt_scheduler;
@@ -504,13 +504,6 @@ scheduler_close(int sock)
 
 	set_sched_sock(-1, psched);
 
-	/*if (sched_delete(psched) == PBSE_OBJBUSY) {
-		snprintf(log_buffer, sizeof(log_buffer),
-				"Scheduler %s is busy", psched->sc_name);
-		log_err(PBSE_OBJBUSY, __func__, log_buffer);
-		return;
-	}*/
-
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;
 	scheduler_jobs_stat = 0;
@@ -630,9 +623,11 @@ pbs_sched *
 recov_sched_from_db(char *partition, char *sched_name)
 {
 	int rc;
+	int append = 1;
 	pbs_db_sched_info_t dbsched;
 	pbs_db_obj_info_t obj;
 	pbs_sched *ps = NULL;
+	pbs_sched *old_sched = NULL;
 	char *sname = "new";
 	pbs_db_query_options_t qry_options = {0};
 	void *state = NULL;
@@ -651,13 +646,20 @@ recov_sched_from_db(char *partition, char *sched_name)
 	obj.pbs_db_un.pbs_db_sched = &dbsched;
 
 
+	dbsched.partition_name[0] = '\0';
+	dbsched.sched_name[0] = '\0';
+
 	if (partition != NULL) {
-		dbsched.partition_name[0] = '\0';
 		snprintf(dbsched.partition_name, sizeof(dbsched.partition_name), "%%%s%%", partition);
+		old_sched = find_scheduler_by_partition(partition);
+		if (old_sched != NULL)
+			append = 0;
 	}
 	else if (sched_name != NULL) {
-		dbsched.sched_name[0] = '\0';
 		snprintf(dbsched.sched_name, sizeof(dbsched.sched_name), "%s", sched_name);
+		old_sched = find_scheduler(dbsched.sched_name);
+		if (old_sched != NULL)
+			append = 0;
 	}
 
 
@@ -672,7 +674,7 @@ recov_sched_from_db(char *partition, char *sched_name)
 
 	if ((rc = pbs_db_cursor_next(conn, state, &obj)) == 0) {
 		/* recover sched */
-		ps = sched_alloc(sname);  /* allocate & init sched structure space */
+		ps = sched_alloc(sname, append);  /* allocate & init sched structure space */
 		if (ps == NULL) {
 			log_err(-1, "sched_recov", "sched_alloc failed");
 			return NULL;
@@ -694,6 +696,19 @@ recov_sched_from_db(char *partition, char *sched_name)
 		return NULL;
 
 	/* all done recovering the sched */
+	if (append == 0) {
+		if (ps != NULL) {
+			copy_sched_misc_not_in_db(ps, old_sched);
+			sched_free(old_sched);
+			/*if (sched_delete(old_sched) == PBSE_OBJBUSY) {
+				   snprintf(log_buffer, sizeof(log_buffer),
+						   "Scheduler %s is busy", old_sched->sc_name);
+				   log_err(PBSE_OBJBUSY, __func__, log_buffer);
+			  }*/
+			CLEAR_LINK(ps->sc_link);
+			append_link(&svr_allscheds, &ps->sc_link, ps);
+		}
+	}
 	return (ps);
 
 db_err:

@@ -113,7 +113,7 @@ extern int recov_attr_db(pbs_db_conn_t *conn,
 	int unknown);
 extern int utimes(const char *path, const struct timeval *times);
 #endif /* localmod 005 */
-extern pbs_sched *sched_alloc(char *sched_name);
+extern pbs_sched *sched_alloc(char *sched_name, int append);
 
 /**
  * @brief

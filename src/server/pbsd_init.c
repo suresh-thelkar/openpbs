@@ -232,7 +232,7 @@ static int   attach_queue_to_reservation(resc_resv *);
 static void  call_log_license(struct work_task *);
 extern int create_resreleased(job *pjob);
 
-extern pbs_sched *sched_alloc(char *sched_name);
+extern pbs_sched *sched_alloc(char *sched_name, int append);
 
 /* private data */
 
@@ -705,6 +705,15 @@ pbsd_init(int type)
 			svr_attr_def[(int)SRV_ATR_Comment].at_free(
 				&server.sv_attr[(int)SRV_ATR_Comment]);
 		}
+		/* recover default scheduler here */
+		dflt_scheduler = recov_sched_from_db(NULL, "default");
+		if (!dflt_scheduler) {
+			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
+			set_sched_default(dflt_scheduler, 0, 0);
+			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
+		}
+		dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
+		dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
 	} else {	/* init type is "create" */
 		if (rc == 0) {		/* server was loaded */
 #ifdef WIN32
@@ -724,7 +733,7 @@ pbsd_init(int type)
 			}
 		}
 		svr_save_db(&server, SVR_SAVE_NEW);
-		dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME);
+		dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
 		set_sched_default(dflt_scheduler, 0, 0);
 		(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
 	}
