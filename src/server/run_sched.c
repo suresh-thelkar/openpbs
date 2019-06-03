@@ -216,7 +216,19 @@ find_assoc_sched_pque(pbs_queue *pq, pbs_sched **target_sched)
 
 	if (pq->qu_attr[QA_ATR_partition].at_flags & ATR_VFLAG_SET) {
 		*target_sched = recov_sched_from_db(pq->qu_attr[QA_ATR_partition].at_val.at_str, NULL);
-		return 1;
+		if (*target_sched == NULL) {
+			/* if scheduler is not present in the database means one possibility is
+			 * somebody deleted it from another server so if this is the case then we need to
+			 * delete the scheduler from the cache also
+			 */
+			pbs_sched *old_sched;
+			old_sched = find_scheduler_by_partition(pq->qu_attr[QA_ATR_partition].at_val.at_str);
+			if (old_sched != NULL)
+				sched_free(old_sched);
+			return 0;
+		}
+		else
+			return 1;
 	} else {
 		dflt_scheduler = *target_sched = recov_sched_from_db(NULL, "default");
 		if (!dflt_scheduler) {

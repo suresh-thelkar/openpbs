@@ -695,17 +695,16 @@ find_scheduler(char *sched_name)
 pbs_sched *
 find_scheduler_by_partition(char *partition)
 {
-
+	int i;
 	pbs_sched *psched = NULL;
-	char **psched_partitions;
 
-        psched = (pbs_sched *) GET_NEXT(svr_allscheds);
         for (psched = (pbs_sched *) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched *) GET_NEXT(psched->sc_link)) {
-		psched_partitions = break_comma_list(psched->sch_attr[SCHED_ATR_partition].at_val.at_str);
-		if (psched_partitions == NULL)
-			continue;
-		if (is_string_in_arr(psched_partitions, partition))
-			return psched;
+        	if (psched->sch_attr[SCHED_ATR_partition].at_val.at_arst) {
+			for (i=0; i<psched->sch_attr[SCHED_ATR_partition].at_val.at_arst->as_usedptr; ++i) {
+				if (strcmp(partition, psched->sch_attr[SCHED_ATR_partition].at_val.at_arst->as_string[i]) == 0)
+					return psched;
+			}
+        	}
 	}
 
 	return NULL;
