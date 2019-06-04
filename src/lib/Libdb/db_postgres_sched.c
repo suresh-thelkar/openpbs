@@ -306,6 +306,9 @@ pg_db_find_sched(pbs_db_conn_t *conn, void *st, pbs_db_obj_info_t *obj,
 		params = 1;
 		pbs_db_sched_info_t *psch = obj->pbs_db_un.pbs_db_sched;
 		SET_PARAM_STR(conn, psch->sched_name, 0);
+	} else if (opts->flags == 3) {
+		strncpy(conn->conn_sql, STMT_SELECT_SCHED_ALL, (MAX_SQL_LENGTH-1));
+		params = 0;
 	}
 
 	conn->conn_sql[MAX_SQL_LENGTH-1] = '\0';
