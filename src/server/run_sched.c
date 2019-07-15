@@ -368,6 +368,7 @@ schedule_high(pbs_sched *psched)
 	if (psched->scheduler_sock == -1) {
 		if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
 			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
+			sched_save_db(psched, SVR_SAVE_FULL);
 			return (-1);
 		}
 		set_sched_sock(s, psched);
@@ -445,6 +446,7 @@ schedule_jobs(pbs_sched *psched)
 
 		if ((s = contact_sched(cmd, jid, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
 			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
+			sched_save_db(psched, SVR_SAVE_FULL);
 			return (-1);
 		}
 		else if (pdefr != NULL)
@@ -649,6 +651,7 @@ recov_sched_from_db(char *partition, char *sched_name)
 
 	dbsched.partition_name[0] = '\0';
 	dbsched.sched_name[0] = '\0';
+
 
 	if (partition != NULL) {
 		snprintf(dbsched.partition_name, sizeof(dbsched.partition_name), "%%%s%%", partition);

@@ -885,6 +885,7 @@ req_stat_sched(struct batch_request *preq)
 	int rc = 0;
 	pbs_sched *psched;
 
+
 	/* allocate a reply structure and a status sub-structure */
 
 	preply = &preq->rq_reply;
@@ -895,13 +896,15 @@ req_stat_sched(struct batch_request *preq)
 	if(strlen(preq->rq_ind.rq_status.rq_id) != 0) {
 		psched = recov_sched_from_db(NULL,preq->rq_ind.rq_status.rq_id);
 
-		/* derive the scheduler state as this is transient and not going to save this in db */
-		if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
-					&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
-		else
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
-					&sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+		if (strcmp(psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str, SC_DOWN) != 0) {
+			/* derive the scheduler state as this is transient and not going to save this in db */
+			if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
+				set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
+						&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
+			else
+				set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
+						&sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+		}
 
 		if(psched) {
 			if (strcmp(psched->sc_name, "default") == 0)
@@ -948,13 +951,15 @@ req_stat_sched(struct batch_request *preq)
 						psched->sch_attr[SCHED_ATR_throughput_mode].at_flags = 0;
 					}
 
-					/* derive the scheduler state as this is transient and not going to save this in db */
-					if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
-						set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
-								&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
-					else
-						set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
-								&sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+					if (strcmp(psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str, SC_DOWN) != 0) {
+						/* derive the scheduler state as this is transient and not going to save this in db */
+						if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
+							set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
+									&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
+						else
+							set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
+									&sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+					}
 
 					stat_reply = status_sched(psched, preq, &preply->brp_un.brp_status);
 					if (stat_reply != 0)
