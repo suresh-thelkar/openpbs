@@ -710,6 +710,7 @@ pbsd_init(int type)
 			svr_attr_def[(int)SRV_ATR_Comment].at_free(
 				&server.sv_attr[(int)SRV_ATR_Comment]);
 		}
+		svr_save_db(&server, SVR_SAVE_FULL);
 
 	} else {	/* init type is "create" */
 		if (rc == 0) {		/* server was loaded */
@@ -732,6 +733,8 @@ pbsd_init(int type)
 
 		svr_save_db(&server, SVR_SAVE_NEW);
 	}
+
+
 
 	/* 4. Check License information */
 

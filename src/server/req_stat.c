@@ -782,6 +782,7 @@ req_stat_svr(struct batch_request *preq)
 	struct brp_status  *pstat;
 
 
+	svr_recov_db(0);
 	/* update count and state counts from sv_numjobs and sv_jobstates */
 
 	server.sv_attr[(int)SRV_ATR_TotalJobs].at_val.at_long = server.sv_numjobs;
