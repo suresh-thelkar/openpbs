@@ -1317,7 +1317,7 @@ struct batch_request *preq;
 		pque = NULL;
 	} else {
 		(void)que_save_db(pque, QUE_SAVE_NEW);
-		(void)svr_save_db(&server, SVR_SAVE_QUICK);
+		(void)svr_save_db(&server, SVR_SAVE_FULL);
 		(void)sprintf(log_buffer, msg_manager, msg_man_cre,
 			preq->rq_user, preq->rq_host);
 		log_event(PBSEVENT_ADMIN, PBS_EVENTCLASS_QUEUE, LOG_INFO,
@@ -1433,7 +1433,7 @@ mgr_queue_delete(struct batch_request *preq)
 				rc = PBSE_OBJBUSY;
 			}
 			else {
-				svr_save_db(&server, SVR_SAVE_QUICK);
+				svr_save_db(&server, SVR_SAVE_FULL);
 				(void)sprintf(log_buffer, msg_manager, msg_man_del,
 					preq->rq_user, preq->rq_host);
 

@@ -400,7 +400,7 @@ poke_scheduler(attribute *pattr, void *pobj, int actmode)
 			}
 		} else {
 			svr_attr_def[(int) SRV_ATR_scheduling].at_set(&server.sv_attr[SRV_ATR_scheduling], pattr, SET);
-			svr_save_db(&server, SVR_SAVE_QUICK);
+			svr_save_db(&server, SVR_SAVE_FULL);
 		}
 		if (actmode == ATR_ACTION_ALTER) {
 			if (pattr->at_val.at_long)

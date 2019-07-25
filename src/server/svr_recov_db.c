@@ -333,8 +333,6 @@ svr_save_db(struct server *ps, int mode)
 
 	if (mode == SVR_SAVE_FULL)
 		savetype = PBS_UPDATE_DB_FULL;
-	else if (mode == SVR_SAVE_QUICK)
-		savetype = PBS_UPDATE_DB_QUICK;
 	else
 		savetype = PBS_INSERT_DB;
 
@@ -403,8 +401,6 @@ sched_save_db(pbs_sched *ps, int mode)
 
 	if (mode == SVR_SAVE_FULL)
 		savetype = PBS_UPDATE_DB_FULL;
-	else if (mode == SVR_SAVE_QUICK)
-		savetype = PBS_UPDATE_DB_QUICK;
 	else
 		savetype = PBS_INSERT_DB;
 
