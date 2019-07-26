@@ -278,6 +278,36 @@ dup_node_partition(node_partition *onp, server_info *nsinfo)
 }
 
 /**
+ * @brief copy a node partition array from pointers out of another.
+ * @param[in] onp_arr - old node partition array
+ * @param[in] new_nps - node partition array with new pointers
+ * 
+ * @return node_partition **
+ */
+node_partition **
+copy_node_partition_ptr_array(node_partition **onp_arr, node_partition **new_nps)
+{
+	int cnt;
+	int i;
+	node_partition **nnp_arr;
+
+	if (onp_arr == NULL || new_nps == NULL)
+		return NULL;
+
+	cnt = count_array((void **)onp_arr);
+	if ((nnp_arr = malloc((cnt + 1) * sizeof(node_partition *))) == NULL) {
+		log_err(errno, __func__, MEM_ERR_MSG);
+		return NULL;
+	}
+
+	for (i = 0; i < cnt; i++)
+		nnp_arr[i] = find_node_partition_by_rank(new_nps, onp_arr[i]->rank);
+	nnp_arr[i] = NULL;
+
+	return nnp_arr;
+}
+
+/**
  * @brief
  *		find_node_partition - find a node partition by (resource_name=value)
  *			      partition name from a pool of partitions
@@ -423,6 +453,8 @@ create_node_partitions(status *policy, node_info **nodes, char **resnames, unsig
 				res = &unset_res;
 			}
 			if (res != NULL) {
+				if (res->indirect_res != NULL)
+					res = res->indirect_res;
 				for (val_i = 0; res->str_avail[val_i] != NULL; val_i++) {
 					/* 2: 1 for '=' 1 for '\0' */
 					if (reslen + strlen(res->str_avail[val_i]) + 2 < 1024) {
@@ -470,7 +502,7 @@ create_node_partitions(status *policy, node_info **nodes, char **resnames, unsig
 							np_arr[np_i]->rank = get_sched_rank();
 
 							if (np_arr[np_i]->res_val == NULL) {
-								np_arr[np_i+1] = NULL;
+								np_arr[np_i + 1] = NULL;
 								free_node_partition_array(np_arr);
 								return NULL;
 							}
@@ -532,6 +564,8 @@ create_node_partitions(status *policy, node_info **nodes, char **resnames, unsig
 				res = &unset_res;
 			}
 			if (res != NULL) {
+				if (res->indirect_res != NULL)
+					res = res->indirect_res;
 				if (compare_res_to_str(res, np_arr[np_i]->res_val, CMP_CASE)) {
 					if (np_arr[np_i]->ok_break) {
 						tmpres = find_resource(nodes[node_i]->res, getallres(RES_HOST));
@@ -544,6 +578,13 @@ create_node_partitions(status *policy, node_info **nodes, char **resnames, unsig
 							}
 						}
 					}
+					tmp_arr = add_ptr_to_array(nodes[node_i]->np_arr, np_arr[np_i]);
+					if (tmp_arr == NULL) {
+						free_node_partition_array(np_arr);
+						return NULL;
+					}
+					nodes[node_i]->np_arr = tmp_arr;
+
 					np_arr[np_i]->ninfo_arr[i] = nodes[node_i];
 					i++;
 					np_arr[np_i]->ninfo_arr[i] = NULL;
@@ -708,7 +749,7 @@ node_partition_update(status *policy, node_partition *np)
 
 	if (policy->node_sort[0].res_name != NULL && conf.node_sort_unused) {
 		/* Resort the nodes in the partition so that selection works correctly. */
-		qsort(np->ninfo_arr, np->tot_nodes, sizeof(node_info*),
+		qsort(np->ninfo_arr, np->tot_nodes, sizeof(node_info *),
 			multi_node_sort);
 	}
 
@@ -1097,6 +1138,7 @@ create_specific_nodepart(status *policy, char *name, node_info **nodes)
 	node_partition *np;
 	int i, j;
 	int cnt;
+	node_partition **tmp_arr;
 
 	if (name == NULL || nodes == NULL)
 		return NULL;
@@ -1122,6 +1164,13 @@ create_specific_nodepart(status *policy, char *name, node_info **nodes)
 	j = 0;
 	for (i = 0; i < cnt; i++) {
 		if (!nodes[i]->is_stale) {
+			tmp_arr = add_ptr_to_array(nodes[i]->np_arr, np);
+			if (tmp_arr == NULL) {
+				free_node_partition(np);
+				return NULL;
+			}
+			nodes[i]->np_arr = tmp_arr;
+
 			np->ninfo_arr[j] = nodes[i];
 			j++;
 		}
@@ -1244,6 +1293,37 @@ create_placement_sets(status *policy, server_info *sinfo)
 	return is_success;
 }
 
+/**
+ * @brief sort all placement sets (server's psets, queue's psets, and hostsets)
+ * @param[in] policy - policy info
+ * @param[in] sinfo - server universe
+ * @return void
+ */
+void
+sort_all_nodepart(status *policy, server_info *sinfo)
+{
+	int i;
+
+	if (policy == NULL || sinfo == NULL || sinfo->queues == NULL)
+		return;
+
+	if (sinfo->node_group_enable && sinfo->node_group_key != NULL)
+		qsort(sinfo->nodepart, sinfo->num_parts,
+		      sizeof(node_partition *), cmp_placement_sets);
+
+	for (i = 0; sinfo->queues[i] != NULL; i++) {
+		queue_info *qinfo = sinfo->queues[i];
+
+		if (sinfo->node_group_enable && qinfo->node_group_key != NULL)
+			qsort(qinfo->nodepart, qinfo->num_parts,
+			      sizeof(node_partition *), cmp_placement_sets);
+	}
+	if (policy->node_sort[0].res_name != NULL &&
+	    conf.node_sort_unused && sinfo->hostsets != NULL) {
+		/* Resort the nodes in host sets to correctly reflect unused resources */
+		qsort(sinfo->hostsets, sinfo->num_hostsets, sizeof(node_partition *), multi_nodepart_sort);
+	}
+}
 
 /**
  *
@@ -1276,22 +1356,16 @@ update_all_nodepart(status *policy, server_info *sinfo, resource_resv *resresv, 
 	if(sinfo->allpart == NULL)
 		return;
 
-	if (sinfo->node_group_enable && sinfo->node_group_key != NULL) {
+	if (sinfo->node_group_enable && sinfo->node_group_key != NULL)
 		node_partition_update_array(policy, sinfo->nodepart, resresv->ninfo_arr);
-		qsort(sinfo->nodepart, sinfo->num_parts,
-			sizeof(node_partition *), cmp_placement_sets);
-	}
 
 	/* Update and resort the placement sets on the queues */
 	for (i = 0; sinfo->queues[i] != NULL; i++) {
 		qinfo = sinfo->queues[i];
 
-		if (sinfo->node_group_enable && qinfo->node_group_key != NULL) {
+		if (sinfo->node_group_enable && qinfo->node_group_key != NULL)
 			node_partition_update_array(policy, qinfo->nodepart, resresv->ninfo_arr);
 
-			qsort(qinfo->nodepart, qinfo->num_parts,
-			   sizeof(node_partition *), cmp_placement_sets);
-		}
 		if ((flags & NO_ALLPART) == 0) {
 			if(qinfo->allpart != NULL && qinfo->allpart->res == NULL)
 				node_partition_update(policy, qinfo->allpart);
@@ -1300,11 +1374,6 @@ update_all_nodepart(status *policy, server_info *sinfo, resource_resv *resresv, 
 
 	/* Update and resort the hostsets */
 	node_partition_update_array(policy, sinfo->hostsets, NULL);
-	if (policy->node_sort[0].res_name != NULL &&
-	    conf.node_sort_unused && sinfo->hostsets != NULL) {
-		/* Resort the nodes in host sets to correctly reflect unused resources */
-		qsort(sinfo->hostsets, sinfo->num_hostsets, sizeof(node_partition*), multi_nodepart_sort);
-	}
 
 	if ((flags & NO_ALLPART) == 0) {
 		/* If the job is in a queue with nodes, we only need to update
@@ -1316,9 +1385,10 @@ update_all_nodepart(status *policy, server_info *sinfo, resource_resv *resresv, 
 					update_allpart = 0;
 		}
 
-		/* Otherwise, update the server's allpart */
+	sort_all_nodepart(policy, sinfo);
 		if (update_allpart || sinfo->allpart->res == NULL)
 			node_partition_update(policy, sinfo->allpart);
 	}
 
+	sinfo->pset_metadata_stale = 0;
 }
