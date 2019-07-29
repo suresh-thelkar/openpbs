@@ -1538,7 +1538,7 @@ mgr_server_set(struct batch_request *preq)
 	}
 	plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);
 
-	svr_recov_db(0);
+	svr_recov_db(1);
 	rc = mgr_set_attr(server.sv_attr, svr_attr_def, SRV_ATR_LAST, plist,
 		preq->rq_perm, &bad_attr, (void *)&server,
 		ATR_ACTION_ALTER);
@@ -1571,7 +1571,7 @@ mgr_server_unset(struct batch_request *preq)
 	svrattrl *plist;
 	int	  rc;
 
-	svr_recov_db(0);
+	svr_recov_db(1);
 
 	plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);
 
