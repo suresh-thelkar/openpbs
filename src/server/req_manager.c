@@ -1520,6 +1520,7 @@ mgr_server_set(struct batch_request *preq)
 	int	  bad_attr = 0;
 	svrattrl *plist;
 	int	  rc;
+	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
 
 
 	plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);
@@ -1538,14 +1539,22 @@ mgr_server_set(struct batch_request *preq)
 	}
 	plist = (svrattrl *)GET_NEXT(preq->rq_ind.rq_manager.rq_attr);
 
+	if (pbs_db_begin_trx(conn, 0, 0) !=0)
+		return;
+
 	svr_recov_db(1);
 	rc = mgr_set_attr(server.sv_attr, svr_attr_def, SRV_ATR_LAST, plist,
 		preq->rq_perm, &bad_attr, (void *)&server,
 		ATR_ACTION_ALTER);
-	if (rc != 0)
+	if (rc != 0) {
 		reply_badattr(rc, bad_attr, plist, preq);
+		if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
+			return;
+	}
 	else {
 		svr_save_db(&server, SVR_SAVE_FULL);
+		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
+			return;
 		(void)sprintf(log_buffer, msg_manager, msg_man_set,
 			preq->rq_user, preq->rq_host);
 		log_event(PBSEVENT_ADMIN, PBS_EVENTCLASS_SERVER, LOG_INFO,
@@ -1570,6 +1579,10 @@ mgr_server_unset(struct batch_request *preq)
 	int	  bad_attr = 0;
 	svrattrl *plist;
 	int	  rc;
+	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
+
+	if (pbs_db_begin_trx(conn, 0, 0) !=0)
+		return;
 
 	svr_recov_db(1);
 
@@ -1592,12 +1605,16 @@ mgr_server_unset(struct batch_request *preq)
 
 				reply_badattr(PBSE_SSIGNON_BAD_TRANSITION1, bad_attr,
 					plist, preq);
+				if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
+					return;
 				return;
 			}
 		} else if (strcasecmp(plist->al_name, ATTR_aclroot) == 0) {
 			/*Only root at server host can unset server attribute "acl_roots".*/
 			if (!is_local_root(preq->rq_user, preq->rq_host)) {
 				reply_badattr(PBSE_ATTRRO, bad_attr, plist, preq);
+				if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
+					return;
 				return;
 			}
 		} else if (strcasecmp(plist->al_name,
@@ -1662,6 +1679,8 @@ mgr_server_unset(struct batch_request *preq)
 				if (rc != 0) {
 					free_svrattrl(tm_list);
 					reply_badattr(rc, bad_attr, plist, preq);
+					if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
+						return;
 					return;
 				}
 				(void)sched_save_db(dflt_scheduler, SVR_SAVE_FULL);
@@ -1674,13 +1693,18 @@ mgr_server_unset(struct batch_request *preq)
 
 	rc = mgr_unset_attr(server.sv_attr, svr_attr_def, SRV_ATR_LAST, plist,
 		preq->rq_perm, &bad_attr, (void *)&server, PARENT_TYPE_SERVER, INDIRECT_RES_CHECK);
-	if (rc != 0)
+	if (rc != 0) {
 		reply_badattr(rc, bad_attr, plist, preq);
+		if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
+			return;
+	}
 	else {
 		if (server.sv_attr[SVR_ATR_DefaultChunk].at_flags & ATR_VFLAG_MODIFY) {
 			(void)deflt_chunk_action(&server.sv_attr[SVR_ATR_DefaultChunk], (void *)&server, ATR_ACTION_ALTER);
 		}
 		svr_save_db(&server, SVR_SAVE_FULL);
+		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
+			return;
 		(void)sprintf(log_buffer, msg_manager, msg_man_uns,
 			preq->rq_user, preq->rq_host);
 		log_event(PBSEVENT_ADMIN, PBS_EVENTCLASS_SERVER, LOG_INFO,
