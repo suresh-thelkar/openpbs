@@ -119,7 +119,7 @@ find_sched(char *sched_name)
 	if (!sched_name)
 		return NULL;
 
-	psched = recov_sched_from_db(NULL, sched_name);
+	psched = recov_sched_from_db(NULL, sched_name, 1);
 	if (psched) {
 		if (strcmp(psched->sc_name, "default") == 0)
 			dflt_scheduler = psched;

@@ -641,7 +641,7 @@ pbsd_init(int type)
 	/* 5. If not a "create" initialization, recover server db */
 	/*    and sched db					  */
 	if (type != RECOV_CREATE) {
-		dflt_scheduler = recov_sched_from_db(NULL, "default");
+		dflt_scheduler = recov_sched_from_db(NULL, "default", 1);
 		if (!dflt_scheduler) {
 			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
 			set_sched_default(dflt_scheduler, 0);
