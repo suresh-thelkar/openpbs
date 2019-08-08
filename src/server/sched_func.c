@@ -113,13 +113,13 @@ sched_alloc(char *sched_name, int append)
  */
 
 pbs_sched *
-find_sched(char *sched_name)
+find_sched(char *sched_name, int lock)
 {
 	pbs_sched *psched = NULL;
 	if (!sched_name)
 		return NULL;
 
-	psched = recov_sched_from_db(NULL, sched_name, 1);
+	psched = recov_sched_from_db(NULL, sched_name, lock);
 	if (psched) {
 		if (strcmp(psched->sc_name, "default") == 0)
 			dflt_scheduler = psched;

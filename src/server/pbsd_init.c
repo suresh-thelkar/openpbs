@@ -641,11 +641,13 @@ pbsd_init(int type)
 	/* 5. If not a "create" initialization, recover server db */
 	/*    and sched db					  */
 	if (type != RECOV_CREATE) {
+		pbs_db_begin_trx(conn, 0, 0);
 		dflt_scheduler = recov_sched_from_db(NULL, "default", 1);
 		if (!dflt_scheduler) {
 			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
 			set_sched_default(dflt_scheduler, 0);
 			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
+			pbs_db_end_trx(conn, PBS_DB_COMMIT);
 		}
 		dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
 		dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
