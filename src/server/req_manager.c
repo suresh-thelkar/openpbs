@@ -1783,13 +1783,14 @@ mgr_sched_unset(struct batch_request *preq)
 	int	  rc;
 	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
 
-	if (pbs_db_begin_trx(conn, 0, 0) !=0)
+	if (pbs_db_begin_trx(conn, 0, 0) != 0) {
+		req_reject(PBSE_SYSTEM, 0, preq);
 		return;
+	}
 	pbs_sched *psched = find_sched(preq->rq_ind.rq_manager.rq_objname, 1);
 	if (!psched) {
 		req_reject(PBSE_UNKSCHED, 0, preq);
-		if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
-			return;
+		pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
 		return;
 	}
 
@@ -1804,8 +1805,7 @@ mgr_sched_unset(struct batch_request *preq)
 				t_list = attrlist_create(tmp_plist->al_name, NULL, 0);
 				if (t_list == NULL) {
 					reply_badattr(-1, bad_attr, tmp_plist, preq);
-					if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
-						return;
+					pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
 					return;
 				}
 				t_list->al_link.ll_next->ll_struct = NULL;
@@ -1814,8 +1814,7 @@ mgr_sched_unset(struct batch_request *preq)
 				if (rc != 0) {
 					free_svrattrl(t_list);
 					reply_badattr(rc, bad_attr, tmp_plist, preq);
-					if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
-						return;
+					pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
 					return;
 				}
 				svr_save_db(&server, SVR_SAVE_FULL);
@@ -1837,8 +1836,10 @@ mgr_sched_unset(struct batch_request *preq)
 		/* save the attributes to disk */
 		set_sched_default(psched, 1);
 		(void)sched_save_db(psched, SVR_SAVE_FULL);
-		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
+		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0) {
+			req_reject(PBSE_SYSTEM, 0, preq);
 			return;
+		}
 		(void)sprintf(log_buffer, msg_manager, msg_man_uns,
 			preq->rq_user, preq->rq_host);
 		log_event(PBSEVENT_ADMIN, PBS_EVENTCLASS_SCHED, LOG_INFO,
@@ -3712,15 +3713,12 @@ mgr_sched_create(struct batch_request *preq)
 	svrattrl *plist;
 	pbs_sched *psched;
 	int rc;
-	pbs_db_conn_t *conn = (pbs_db_conn_t *) svr_db_conn;
 
 	if (strlen(preq->rq_ind.rq_manager.rq_objname) > PBS_MAXSCHEDNAME) {
 		req_reject(PBSE_SCHED_NAME_BIG, 0, preq);
 		return;
 	}
 
-	if (pbs_db_begin_trx(conn, 0, 0) !=0)
-		return;
 
 	if (find_sched(preq->rq_ind.rq_manager.rq_objname, 1)) {
 		req_reject(PBSE_SCHEDEXIST, 0, preq);
@@ -3729,8 +3727,6 @@ mgr_sched_create(struct batch_request *preq)
 
 	psched = sched_alloc(preq->rq_ind.rq_manager.rq_objname, 1);
 	if (!psched) {
-		if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
-			return;
 		req_reject(PBSE_SYSTEM, 0, preq);
 		return;
 	}
@@ -3744,15 +3740,11 @@ mgr_sched_create(struct batch_request *preq)
 		reply_badattr(rc, bad, plist, preq);
 		sched_free(psched);
 		psched = NULL;
-		if (pbs_db_end_trx(conn, PBS_DB_ROLLBACK) != 0)
-			return;
 	} else {
 
 		/* save the attributes to disk */
 		set_sched_default(psched, 0);
 		(void) sched_save_db(psched, SVR_SAVE_FULL);
-		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0)
-			return;
 		snprintf(log_buffer, LOG_BUF_SIZE, msg_manager, msg_man_set,
 				preq->rq_user, preq->rq_host);
 		log_event(PBSEVENT_ADMIN, PBS_EVENTCLASS_SCHED, LOG_INFO, msg_daemonname, log_buffer);
