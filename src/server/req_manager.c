@@ -3440,11 +3440,7 @@ mgr_sched_delete(struct batch_request *preq)
 		}
 	}
 	reply_ack(preq); /*request completely successful*/
-	if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0) {
-		req_reject(PBSE_SYSTEM, 0, preq);
-		return;
-	}
-	return;
+	pbs_db_end_trx(conn, PBS_DB_COMMIT);
 }
 
 /*
