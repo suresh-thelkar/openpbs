@@ -155,7 +155,7 @@ extern int chk_save_file(char *filename);
 extern int chk_and_update_db_svrhost();
 #endif /* localmod 005 */
 
-extern int put_sched_cmd(int sock, int cmd, char *jobid);
+extern int put_sched_cmd(int sock, int cmd, char *identifier);
 
 /* External data items */
 extern  pbs_list_head svr_requests;

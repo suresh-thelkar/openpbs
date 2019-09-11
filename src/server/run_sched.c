@@ -142,7 +142,7 @@ catchalrm(int sig)
  */
 
 int
-put_sched_cmd(int sock, int cmd, char *jobid)
+put_sched_cmd(int sock, int cmd, char *identifier)
 {
 	int   ret;
 
@@ -150,8 +150,8 @@ put_sched_cmd(int sock, int cmd, char *jobid)
 	if ((ret = diswsi(sock, cmd)) != DIS_SUCCESS)
 		goto err;
 
-	if (cmd == SCH_SCHEDULE_AJOB) {
-		if ((ret = (diswst(sock, jobid))) != DIS_SUCCESS)
+	if ((cmd == SCH_SCHEDULE_AJOB) || (cmd == SCH_SVR_IDENTIFIER)) {
+		if ((ret = (diswst(sock, identifier))) != DIS_SUCCESS)
 			goto err;
 	}
 
@@ -276,6 +276,7 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 #ifndef WIN32
 	struct sigaction act, oact;
 #endif
+	char my_index[pbs_conf.pbs_max_servers];
 
 	if ((cmd == SCH_SCHEDULE_AJOB) && (jobid == NULL))
 		return -1;	/* need a jobid */
@@ -326,6 +327,12 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 	#endif
 			snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
 			log_err(-1, __func__, log_buffer);
+			return (-1);
+		}
+
+		snprintf(my_index, pbs_conf.pbs_max_servers, "%d", get_my_index());
+		if (put_sched_cmd(sock, SCH_SVR_IDENTIFIER, my_index) < 0) {
+			close_conn(sock);
 			return (-1);
 		}
 

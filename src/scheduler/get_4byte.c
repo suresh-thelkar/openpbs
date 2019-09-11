@@ -82,24 +82,24 @@
  */
 
 int
-get_sched_cmd(int sock, int *val, char **jid)
+get_sched_cmd(int sock, int *val, char **identifier)
 {
 	int	i;
 	int     rc = 0;
-	char	*jobid = NULL;
+	char	*id_num = NULL;
 
 	DIS_tcp_setup(sock);
 
 	i = disrsi(sock, &rc);
 	if (rc != 0)
 		goto err;
-	if (i == SCH_SCHEDULE_AJOB) {
-		jobid = disrst(sock, &rc);
+	if ((i == SCH_SCHEDULE_AJOB) || (i== SCH_SVR_IDENTIFIER)) {
+		id_num = disrst(sock, &rc);
 		if (rc != 0)
 			goto err;
-		*jid = jobid;
+		*identifier = id_num;
 	} else {
-		*jid = NULL;
+		*identifier = NULL;
 	}
 	*val = i;
 	return 1;

@@ -742,7 +742,10 @@ accept_client(int *conn)
 	pbs_socklen_t	slen;
 	int		i;
 	pbs_net_t	addr;
-	int			client_port;
+	int		client_port;
+	char		*svr_id = NULL;
+	int		cmd;
+	char		*endp;
 
 	slen = sizeof(saddr);
 	new_socket = accept(server_sock,
@@ -777,11 +780,22 @@ accept_client(int *conn)
 	}
 
 	i = 0;
-	if (pbs_conf.pbs_max_servers > 1) {
+
+	if (get_sched_cmd(new_socket, &cmd, &svr_id) != 1) {
+		log_err(errno, __func__, "get_sched_cmd");
+		CS_close_socket(new_socket);
+		close(new_socket);
+		return SCH_ERROR;
+	}
+
+	if (cmd == SCH_SVR_IDENTIFIER)
+		i = strtol(svr_id, &endp, 10);
+
+	/*if (pbs_conf.pbs_max_servers > 1) {
 		for(i = 0; i < pbs_conf.pbs_current_servers; i++) {
-			/* TODO
+			 TODO
 			 * Also need to check/validate hostname
-			 */
+
 			if (client_port == pbs_conf.psi[i]->port) {
 				break;
 			}
@@ -791,7 +805,7 @@ accept_client(int *conn)
 			close(new_socket);
 			return SCH_ERROR;
 		}
-	}
+	}*/
 
 	if ((connector = socket_to_conn(new_socket, i)) < 0) {
 		log_err(errno, __func__, "socket_to_conn");
@@ -1067,6 +1081,7 @@ main(int argc, char *argv[])
 #ifdef  RLIMIT_CORE
 	int      	char_in_cname = 0;
 #endif  /* RLIMIT_CORE */
+	int 		j;
 
 	/*the real deal or show version and exit?*/
 
@@ -1610,9 +1625,18 @@ main(int argc, char *argv[])
 			for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
 				if (FD_ISSET(client_socks[i], &fdset)) {
 					if (get_sched_cmd(client_socks[i], &cmd, &runjobid) != 1) {
+						pbs_sock_pair *p = NULL;
 						log_err(errno, __func__, "get_sched_cmd");
 						CS_close_socket(client_socks[i]);
 						close(client_socks[i]);
+						/* Also close its pairing socket */
+						p = get_sock_pair(connector, client_socks[i]);
+						if (p != NULL) {
+							if (p->primary_sd == client_socks[i])
+								close(p->secondary_sd);
+							else if (p->secondary_sd == client_socks[i])
+								close(p->primary_sd);
+						}
 						//return SCH_ERROR;
 					} else {
 						if (connector >= 0) {
@@ -1671,5 +1695,8 @@ main(int argc, char *argv[])
 	lock_out(lockfds, F_UNLCK);
 
 	(void)close(server_sock);
+	for (j = 0; j < 2 * pbs_conf.pbs_current_servers; j++) {
+		close(client_socks[j]);
+	}
 	exit(0);
 }
