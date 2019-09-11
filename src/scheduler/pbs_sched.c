@@ -111,10 +111,13 @@
 #include	"config.h"
 #include	"fifo.h"
 #include	"globals.h"
+#include	"pbs_sched.h"
 
-struct		connect_handle connection[NCONNECTS];
-int		connector;
+struct	connect_handle connection[NCONNECTS];
+int		connector = -1;
 int		server_sock;
+int		*client_socks;
+int		client_sd;
 int		second_connection = -1;
 
 #define		START_CLIENTS	2	/* minimum number of clients */
@@ -146,7 +149,7 @@ extern int do_soft_cycle_interrupt;
 extern int do_hard_cycle_interrupt;
 #endif /* localmod 030 */
 
-static int	engage_authentication(struct connect_handle *);
+static int	engage_authentication(int);
 
 extern char *msg_startup1;
 /**
@@ -286,20 +289,71 @@ server_disconnect(int connect)
  * @retval	-1	: error, not able to connect.
  */
 int
-socket_to_conn(int sock)
+socket_to_conn(int sock, int index)
 {
 	int     i;
+	//static int first_time;
+
+	if (connector != -1) {
+		if (pbs_conf.pbs_max_servers > 1) {
+			if (connection[connector].ch_shards[index]->sd == -1)
+				connection[connector].ch_shards[index]->sd = sock;
+			else
+				connection[connector].ch_shards[index]->secondary_sd = sock;
+
+			connection[connector].ch_shards[index]->state = SHARD_CONN_STATE_CONNECTED;
+			connection[connector].ch_shards[index]->state_change_time = time(0);
+		} else {
+			if (connection[connector].ch_socket != -1)
+				connection[connector].ch_seconary_socket = sock;
+			else
+				connection[connector].ch_socket= sock;
+		}
+		return connector;
+	}
 
 	for (i=0; i<NCONNECTS; i++) {
 		if (connection[i].ch_inuse == 0) {
-
 			if (pbs_client_thread_lock_conntable() != 0)
 				return -1;
 
 			connection[i].ch_inuse = 1;
 			connection[i].ch_errno = 0;
-			connection[i].ch_socket= sock;
+			connection[i].ch_socket= -1;
+			connection[i].ch_seconary_socket = -1;
 			connection[i].ch_errtxt = NULL;
+			connection[i].shard_context = -1;
+
+			if (pbs_conf.pbs_max_servers > 1) {
+				if (connection[i].ch_shards == NULL) {
+					if (!(connection[i].ch_shards = calloc(get_current_servers(), sizeof(struct shard_conn *)))) {
+						pbs_errno = PBSE_SYSTEM;
+						connection[i].ch_inuse = 0;
+						return -1;
+					}
+					for (i = 0; i < get_current_servers(); i++) {
+						connection[i].ch_shards[i] = malloc(sizeof(struct shard_conn));
+						connection[i].ch_shards[i]->sd = -1;
+						connection[i].ch_shards[i]->secondary_sd = -1;
+						connection[i].ch_shards[i]->state = SHARD_CONN_STATE_DOWN;
+						connection[i].ch_shards[i]->state_change_time = 0;
+						connection[i].ch_shards[i]->last_used = 0;
+					}
+				} else {
+					if (connection[i].ch_shards[index]->sd == -1)
+						connection[i].ch_shards[index]->sd = sock;
+					else
+						connection[i].ch_shards[index]->secondary_sd = sock;
+
+					connection[i].ch_shards[index]->state = SHARD_CONN_STATE_CONNECTED;
+					connection[i].ch_shards[index]->state_change_time = time(0);
+				}
+			} else {
+				if (connection[i].ch_socket != -1)
+					connection[i].ch_seconary_socket = sock;
+				else
+					connection[i].ch_socket= sock;
+			}
 
 			if (pbs_client_thread_unlock_conntable() != 0)
 				return -1;
@@ -307,9 +361,12 @@ socket_to_conn(int sock)
 			return (i);
 		}
 	}
+
 	pbs_errno = PBSE_NOCONNECTS;
 	return (-1);
 }
+
+
 /**
  * @brief
  * 		add a new client to the list of clients.
@@ -590,13 +647,13 @@ server_command(char **jid)
 		return SCH_ERROR;
 	}
 
-	if ((connector = socket_to_conn(new_socket)) < 0) {
+	if ((connector = socket_to_conn(new_socket, i)) < 0) {
 		log_err(errno, __func__, "socket_to_conn");
 		close(new_socket);
 		return SCH_ERROR;
 	}
 
-	if (engage_authentication(&connection [connector]) == -1) {
+	if (engage_authentication(new_socket) == -1) {
 		CS_close_socket(new_socket);
 		close(new_socket);
 		return SCH_ERROR;
@@ -678,6 +735,107 @@ server_command(char **jid)
 	return cmd;
 }
 
+int
+accept_client(int *conn)
+{
+	int		new_socket = -1;
+	pbs_socklen_t	slen;
+	int		i;
+	pbs_net_t	addr;
+	int			client_port;
+
+	slen = sizeof(saddr);
+	new_socket = accept(server_sock,
+		(struct sockaddr *)&saddr, &slen);
+	if (new_socket == -1) {
+		log_err(errno, __func__, "accept");
+		return SCH_ERROR;
+	}
+
+	if (set_nodelay(new_socket) == -1) {
+		snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on primary socket connection %d (errno=%d)\n", new_socket, errno);
+		log_err(-1, __func__, log_buffer);
+		return SCH_ERROR;
+	}
+
+	client_port = ntohs(saddr.sin_port);
+	if (client_port >= IPPORT_RESERVED) {
+		badconn("non-reserved port");
+		close(new_socket);
+		return SCH_ERROR;
+	}
+
+	addr = (pbs_net_t)saddr.sin_addr.s_addr;
+	for (i=0; i<numclients; i++) {
+		if (addr == okclients[i])
+			break;
+	}
+	if (i == numclients) {
+		badconn("unauthorized host");
+		close(new_socket);
+		return SCH_ERROR;
+	}
+
+	i = 0;
+	if (pbs_conf.pbs_max_servers > 1) {
+		for(i = 0; i < pbs_conf.pbs_current_servers; i++) {
+			/* TODO
+			 * Also need to check/validate hostname
+			 */
+			if (client_port == pbs_conf.psi[i]->port) {
+				break;
+			}
+		}
+		if (i == pbs_conf.pbs_current_servers) {
+			badconn("unauthorized host");
+			close(new_socket);
+			return SCH_ERROR;
+		}
+	}
+
+	if ((connector = socket_to_conn(new_socket, i)) < 0) {
+		log_err(errno, __func__, "socket_to_conn");
+		close(new_socket);
+		return SCH_ERROR;
+	}
+
+	if (engage_authentication(new_socket) == -1) {
+		CS_close_socket(new_socket);
+		close(new_socket);
+		return SCH_ERROR;
+	}
+
+
+	for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
+		if (client_socks[i] == 0) {
+			client_socks[i] = new_socket;
+			break;
+		}
+	}
+
+	*conn = connector;
+	return 0;
+
+}
+
+int
+get_svr_shard_connection(int channel, int req_type, void *shard_hint)
+{
+	int srv_index;
+	int sd;
+
+	if (pbs_conf.pbs_max_servers > 1) {
+		    srv_index = get_server_shard(shard_hint);
+		    return connection[channel].ch_shards[srv_index]->sd;
+
+	} else
+		sd = connection[channel].ch_socket;
+
+	return sd;
+}
+
+
+
 /**
  * @brief
  *  	engage_authentication - Use the security library interface to
@@ -694,19 +852,18 @@ server_command(char **jid)
  *              information is closed out (freed).
  */
 static int
-engage_authentication(struct connect_handle *phandle)
+engage_authentication(int sock)
 {
 	int	ret;
-	int	sd;
 
-	if (phandle == NULL || (sd = phandle->ch_socket) <0) {
+	if (sock <0) {
 
 		cs_logerr(0, "engage_authentication",
 			"Bad arguments, unable to authenticate.");
 		return (-1);
 	}
 
-	if ((ret = CS_server_auth(sd)) == CS_SUCCESS)
+	if ((ret = CS_server_auth(sock)) == CS_SUCCESS)
 		return (0);
 
 	if (ret == CS_AUTH_CHECK_PORT) {
@@ -1397,10 +1554,19 @@ main(int argc, char *argv[])
 		}
 	}
 
-	FD_ZERO(&fdset);
+	/* Doubling the size of client_socks to accommodate secondary sockets as well */
+	client_socks = calloc(2 * pbs_conf.pbs_max_servers, sizeof(int));
+	if (client_socks == NULL) {
+		log_err(errno, __func__, "Unable to allocate memory (calloc error)");
+		die(0);
+	}
+
 	for (go=1; go;) {
 		int	cmd;
+		int	max_sd;
+		int	i;
 
+		FD_ZERO(&fdset);
 		/*
 		 * with TPP, we don't need to drive rpp_io(), so
 		 * no need to add it to be monitored
@@ -1409,7 +1575,22 @@ main(int argc, char *argv[])
 			FD_SET(rpp_fd, &fdset);
 
 		FD_SET(server_sock, &fdset);
-		if (select(FD_SETSIZE, &fdset, NULL, NULL, NULL) == -1) {
+		max_sd = server_sock;
+
+		if (rpp_fd != -1) {
+			if (rpp_fd > server_sock)
+				max_sd = rpp_fd;
+		}
+
+		for (i = 0; i< 2 * pbs_conf.pbs_current_servers; i++) {
+			if(client_socks[i] > 0)
+				FD_SET( client_socks[i], &fdset);
+
+			if(client_socks[i] > max_sd)
+				max_sd = client_socks[i];
+		 }
+
+		if (select(max_sd + 1, &fdset, NULL, NULL, NULL) == -1) {
 			if (errno != EINTR) {
 				log_err(errno, __func__, "select");
 				die(0);
@@ -1421,55 +1602,68 @@ main(int argc, char *argv[])
 			if (rpp_io() == -1)
 				log_err(errno, __func__, "rpp_io");
 		}
-		if (!FD_ISSET(server_sock, &fdset))
-			continue;
 
-		/* connector is set in server_connect() */
-		cmd = server_command(&runjobid);
+		if (FD_ISSET(server_sock, &fdset)) {
+			if (accept_client(&connector) != 0)
+				die(0);
+		} else {
+			for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
+				if (FD_ISSET(client_socks[i], &fdset)) {
+					if (get_sched_cmd(client_socks[i], &cmd, &runjobid) != 1) {
+						log_err(errno, __func__, "get_sched_cmd");
+						CS_close_socket(client_socks[i]);
+						close(client_socks[i]);
+						//return SCH_ERROR;
+					} else {
+						if (connector >= 0) {
+							/* update sched object attributes on server */
+							update_svr_schedobj(connector, cmd, alarm_time);
 
-		if (connector >= 0) {
-			/* update sched object attributes on server */
-			update_svr_schedobj(connector, cmd, alarm_time);
+							if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
+								log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
 
-			if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
-				log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
+							/* Keep track of time to use in SIGSEGV handler */
+				#ifdef NAS /* localmod 031 */
+							now = time(NULL);
+							if (!opt_no_restart)
+								segv_last_time = now;
+							{
+								strftime(log_buffer, sizeof(log_buffer),
+									"%Y-%m-%d %H:%M:%S", localtime(&now));
+								printf("%s Scheduler received command %d\n", log_buffer, cmd);
+							}
+				#else
+							if (!opt_no_restart)
+								segv_last_time = time(NULL);
 
-			/* Keep track of time to use in SIGSEGV handler */
-#ifdef NAS /* localmod 031 */
-			now = time(NULL);
-			if (!opt_no_restart)
-				segv_last_time = now;
-			{
-				strftime(log_buffer, sizeof(log_buffer),
-					"%Y-%m-%d %H:%M:%S", localtime(&now));
-				printf("%s Scheduler received command %d\n", log_buffer, cmd);
+							DBPRT(("Scheduler received command %d\n", cmd));
+				#endif /* localmod 031 */
+
+							if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
+								go = 0;
+							}
+	/*						if (second_connection != -1) {
+								close(second_connection);
+								second_connection = -1;
+							}
+
+							if (server_disconnect(connector))
+								connector = -1;*/
+
+							if (runjobid != NULL) {
+								free(runjobid);
+								runjobid = NULL;
+							}
+
+							if (sigprocmask(SIG_SETMASK, &oldsigs, NULL) == -1)
+								log_err(errno, __func__, "sigprocmask(SIG_SETMASK)");
+						}
+
+					}
+				}
 			}
-#else
-			if (!opt_no_restart)
-				segv_last_time = time(NULL);
-
-			DBPRT(("Scheduler received command %d\n", cmd));
-#endif /* localmod 031 */
-
-			if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
-				go = 0;
-			}
-			if (second_connection != -1) {
-				close(second_connection);
-				second_connection = -1;
-			}
-
-			if (server_disconnect(connector))
-				connector = -1;
-
-			if (runjobid != NULL) {
-				free(runjobid);
-				runjobid = NULL;
-			}
-
-			if (sigprocmask(SIG_SETMASK, &oldsigs, NULL) == -1)
-				log_err(errno, __func__, "sigprocmask(SIG_SETMASK)");
 		}
+
 	}
 
 	sprintf(log_buffer, "%s normal finish pid %ld", argv[0], (long)pid);

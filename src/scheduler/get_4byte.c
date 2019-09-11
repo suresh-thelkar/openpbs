@@ -50,6 +50,7 @@
 #include <stdlib.h>
 #include "dis.h"
 #include "sched_cmds.h"
+#include "pbs_sched.h"
 
 #ifndef WIN32
 #include <sys/types.h>
@@ -110,6 +111,37 @@ err:
 		return -1;
 }
 
+pbs_sock_pair *
+get_sock_pair(int connector, int sd)
+{
+	int i;
+	pbs_sock_pair *p1 = NULL;
+
+	p1 = malloc(sizeof(pbs_sock_pair));
+	if (p1 == NULL)
+		return p1;
+
+	if (pbs_conf.pbs_max_servers > 1) {
+		if (connection[connector].ch_shards != NULL) {
+			for (i = 0; i < get_current_servers(); i++) {
+				if ((connection[connector].ch_shards[i]->sd == sd) ||
+						(connection[connector].ch_shards[i]->secondary_sd == sd)) {
+					p1->primary_sd = connection[connector].ch_shards[i]->sd;
+					p1->secondary_sd = connection[connector].ch_shards[i]->secondary_sd;
+					return p1;
+				}
+			}
+			if (i == get_current_servers())
+				return NULL;
+		}
+	} else {
+		p1->primary_sd = connection[connector].ch_socket;
+		p1->secondary_sd = connection[connector].ch_seconary_socket;
+		return p1;
+	}
+	return NULL;
+}
+
 /**
  *
  * @brief
@@ -134,14 +166,19 @@ get_sched_cmd_noblk(int sock, int *val, char **jid)
 {
 	struct timeval timeout;
 	fd_set		fdset;
+	pbs_sock_pair *p = NULL;
 	timeout.tv_usec = 0;
 	timeout.tv_sec  = 0;
+	extern int connector;
+
+	if ((p = get_sock_pair(connector, sock)))
+		return 0;
 
 	FD_ZERO(&fdset);
-	FD_SET(sock, &fdset);
+	FD_SET(p->secondary_sd, &fdset);
 	if ((select(FD_SETSIZE, &fdset, NULL, NULL,
-		&timeout) != -1)  && (FD_ISSET(sock, &fdset))) {
-		return (get_sched_cmd(sock, val, jid));
+		&timeout) != -1)  && (FD_ISSET(p->secondary_sd, &fdset))) {
+		return (get_sched_cmd(p->secondary_sd, val, jid));
 	}
 	return (0);
 }

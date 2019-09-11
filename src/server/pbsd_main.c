@@ -1888,7 +1888,7 @@ try_db_again:
 		if (server.sv_attr[(int)SRV_ATR_scheduling].at_val.at_long) {
 			/* Bring up scheduler here */
 			pbs_scheduler_addr = get_hostaddr(pbs_conf.pbs_secondary);
-			if (contact_sched(SCH_SCHEDULE_NULL, NULL, pbs_scheduler_addr, pbs_scheduler_port) < 0) {
+			if (contact_sched(SCH_SCHEDULE_NULL, NULL, dflt_scheduler, PRIMARY) < 0) {
 				char **workenv;
 				char schedcmd[MAXPATHLEN + 1];
 				/* save the current, "safe", environment.
@@ -1984,12 +1984,14 @@ try_db_again:
 	}
 	process_hooks(periodic_req, hook_msg, sizeof(hook_msg), pbs_python_set_interrupt);
 
-	/*
-	 * Make the scheduler (re)-read the configuration
-	 * and fairshare usage.
-	 */
-	(void)contact_sched(SCH_CONFIGURE, NULL, pbs_scheduler_addr, pbs_scheduler_port);
-	(void)contact_sched(SCH_SCHEDULE_NULL, NULL, pbs_scheduler_addr, pbs_scheduler_port);
+	if (server_init_type != RECOV_CREATE) {
+		/*
+		 * Make the scheduler (re)-read the configuration
+		 * and fairshare usage.
+		 */
+		(void)contact_sched(SCH_CONFIGURE, NULL,  dflt_scheduler, PRIMARY);
+		(void)contact_sched(SCH_SCHEDULE_NULL, NULL, dflt_scheduler, SECONDARY);
+	}
 
 	/*
 	 * main loop of server
@@ -2141,7 +2143,7 @@ try_db_again:
 	/* if brought up the Secondary Scheduler, take it down */
 
 	if (brought_up_alt_sched == 1)
-		(void)contact_sched(SCH_QUIT, NULL, pbs_scheduler_addr, pbs_scheduler_port);
+		(void)contact_sched(SCH_QUIT, NULL,  dflt_scheduler, PRIMARY);
 
 	/* if Moms are to to down as well, tell them */
 

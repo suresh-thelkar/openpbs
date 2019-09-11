@@ -110,6 +110,15 @@ typedef struct pbs_sched {
 	attribute sch_attr[SCHED_ATR_LAST];
 } pbs_sched;
 
+typedef struct pbs_sock_pair {
+	int primary_sd;
+	int secondary_sd;
+}pbs_sock_pair;
+
+enum towhich_conn {
+	PRIMARY,
+	SECONDARY,};
+
 
 extern pbs_sched *dflt_scheduler;
 extern	pbs_list_head	svr_allscheds;
@@ -125,6 +134,8 @@ extern int sched_delete(pbs_sched *psched);
 extern pbs_sched *find_sched(char *sched_name, int lock);
 extern pbs_net_t pbs_scheduler_addr;
 extern unsigned int pbs_scheduler_port;
+extern int get_sched_cmd(int sock, int *val, char **jobid);
+extern pbs_sock_pair * get_sock_pair(int connector, int sd);
 
 #ifdef	__cplusplus
 }

@@ -143,7 +143,8 @@ extern char pbs_current_group[];
 
 struct shard_conn {
 	int 	sd;
-	int		state;
+	int	secondary_sd;
+	int	state;
 	time_t	state_change_time;
 	time_t 	last_used;
 };
@@ -157,6 +158,7 @@ struct connect_handle {
 	pthread_mutex_t ch_mutex;  /* serialize connection between threads */
 	struct shard_conn **ch_shards; /* handles to multiple sharded servers */
 	int 	shard_context; /* last server to which dialogue was going on */
+	int	ch_seconary_socket;
 };
 extern struct connect_handle connection[];
 #define PBS_MAX_CONNECTIONS        5000  /* Max connections in the connections array */

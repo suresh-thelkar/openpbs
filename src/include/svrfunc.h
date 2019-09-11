@@ -59,7 +59,7 @@ extern "C" {
 extern int   check_num_cpus(void);
 extern int   chk_hold_priv(long hold, int priv);
 extern void  close_client(int sfds);
-extern int   contact_sched(int, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int pbs_scheduler_port);
+extern int   contact_sched(int, char *jobid, pbs_sched *psched, enum towhich_conn which_conn);
 extern void  count_node_cpus(void);
 extern int   ctcpus(char *buf, int *hascpp);
 extern void  get_jobowner(char *from, char *to);
