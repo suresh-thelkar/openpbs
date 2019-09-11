@@ -155,7 +155,7 @@ extern int chk_save_file(char *filename);
 extern int chk_and_update_db_svrhost();
 #endif /* localmod 005 */
 
-extern int put_sched_cmd(int sock, int cmd, char *jobid);
+extern int put_sched_cmd(int sock, int cmd, char *identifier);
 
 /* External data items */
 extern  pbs_list_head svr_requests;
@@ -1888,7 +1888,7 @@ try_db_again:
 		if (server.sv_attr[(int)SRV_ATR_scheduling].at_val.at_long) {
 			/* Bring up scheduler here */
 			pbs_scheduler_addr = get_hostaddr(pbs_conf.pbs_secondary);
-			if (contact_sched(SCH_SCHEDULE_NULL, NULL, pbs_scheduler_addr, pbs_scheduler_port) < 0) {
+			if (contact_sched(SCH_SCHEDULE_NULL, NULL, dflt_scheduler, PRIMARY) < 0) {
 				char **workenv;
 				char schedcmd[MAXPATHLEN + 1];
 				/* save the current, "safe", environment.
@@ -1967,6 +1967,9 @@ try_db_again:
 	if ((pc=strchr(svr_interp_data.local_host_name, '.')) != NULL)
 		*pc = '\0';
 
+	if (server_init_type != RECOV_CREATE) {
+		connect_to_scheduler(dflt_scheduler);
+	}
 	pbs_python_ext_start_interpreter(&svr_interp_data);
 
 	/* check and enable the prov attributes */
@@ -1984,12 +1987,13 @@ try_db_again:
 	}
 	process_hooks(periodic_req, hook_msg, sizeof(hook_msg), pbs_python_set_interrupt);
 
-	/*
-	 * Make the scheduler (re)-read the configuration
-	 * and fairshare usage.
-	 */
-	(void)contact_sched(SCH_CONFIGURE, NULL, pbs_scheduler_addr, pbs_scheduler_port);
-	(void)contact_sched(SCH_SCHEDULE_NULL, NULL, pbs_scheduler_addr, pbs_scheduler_port);
+	if (server_init_type != RECOV_CREATE) {
+		/*
+		 * Make the scheduler (re)-read the configuration
+		 * and fairshare usage.
+		 */
+		(void)contact_sched(SCH_CONFIGURE, NULL,  dflt_scheduler, PRIMARY);
+	}
 
 	/*
 	 * main loop of server
@@ -2034,6 +2038,11 @@ try_db_again:
 			for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
 				/* if time or event says to run scheduler, do it */
 
+				if (psched->scheduler_sock == -1 && psched->scheduler_sock2 == -1) {
+					connect_to_scheduler(psched);
+					continue;
+				}
+
 				/* if we have a high prio sched command, send it 1st */
 				if (psched->sch_attr[SCHED_ATR_scheduling].at_val.at_long &&
 					psched->svr_do_sched_high != SCH_SCHEDULE_NULL)
@@ -2071,7 +2080,8 @@ try_db_again:
 					 * request, then do schedule_jobs irrespective of the server scheduling
 					 * state.
 					 * If svr_unsent_qrun_req is not set then do the existing checking and do
-					 * scheduling only if server scheduling is turned on.
+					 * scheduling only if server scheduling i
+					 * s turned on.
 					 */
 
 					psched->sch_next_schedule = time_now +
@@ -2145,7 +2155,7 @@ try_db_again:
 	/* if brought up the Secondary Scheduler, take it down */
 
 	if (brought_up_alt_sched == 1)
-		(void)contact_sched(SCH_QUIT, NULL, pbs_scheduler_addr, pbs_scheduler_port);
+		(void)contact_sched(SCH_QUIT, NULL,  dflt_scheduler, PRIMARY);
 
 	/* if Moms are to to down as well, tell them */
 

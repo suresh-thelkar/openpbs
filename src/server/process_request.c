@@ -854,6 +854,12 @@ dispatch_request(int sfds, struct batch_request *request)
 		case PBS_BATCH_SelStat:
 			req_selectjobs(request);
 			break;
+		case PBS_BATCH_SchedCycleEnd:
+			log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_SCHED, LOG_INFO,
+					request->rq_ind.rq_sched_cycle_end.rq_scname,
+					"req_sched_cycle_end is called");
+			req_sched_cycle_end(request);
+			break;
 
 #endif /* !PBS_MOM */
 
