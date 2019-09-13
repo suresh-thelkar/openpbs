@@ -119,6 +119,7 @@ int		server_sock;
 int		*client_socks;
 int		client_sd;
 int		second_connection = -1;
+int		second_sd = -1;
 
 #define		START_CLIENTS	2	/* minimum number of clients */
 #define		MAX_PORT_NUM 65535
@@ -292,6 +293,7 @@ int
 socket_to_conn(int sock, int index)
 {
 	int     i;
+	int	j;
 	//static int first_time;
 
 	if (connector != -1) {
@@ -331,15 +333,15 @@ socket_to_conn(int sock, int index)
 						connection[i].ch_inuse = 0;
 						return -1;
 					}
-					for (i = 0; i < get_current_servers(); i++) {
-						connection[i].ch_shards[i] = malloc(sizeof(struct shard_conn));
-						connection[i].ch_shards[i]->sd = -1;
-						connection[i].ch_shards[i]->secondary_sd = -1;
-						connection[i].ch_shards[i]->state = SHARD_CONN_STATE_DOWN;
-						connection[i].ch_shards[i]->state_change_time = 0;
-						connection[i].ch_shards[i]->last_used = 0;
+					for (j = 0; j < get_current_servers(); j++) {
+						connection[i].ch_shards[j] = malloc(sizeof(struct shard_conn));
+						connection[i].ch_shards[j]->sd = -1;
+						connection[i].ch_shards[j]->secondary_sd = -1;
+						connection[i].ch_shards[j]->state = SHARD_CONN_STATE_DOWN;
+						connection[i].ch_shards[j]->state_change_time = 0;
+						connection[i].ch_shards[j]->last_used = 0;
 					}
-				} else {
+
 					if (connection[i].ch_shards[index]->sd == -1)
 						connection[i].ch_shards[index]->sd = sock;
 					else
@@ -348,6 +350,7 @@ socket_to_conn(int sock, int index)
 					connection[i].ch_shards[index]->state = SHARD_CONN_STATE_CONNECTED;
 					connection[i].ch_shards[index]->state_change_time = time(0);
 				}
+
 			} else {
 				if (connection[i].ch_socket != -1)
 					connection[i].ch_seconary_socket = sock;
@@ -839,8 +842,13 @@ get_svr_shard_connection(int channel, int req_type, void *shard_hint)
 	int sd;
 
 	if (pbs_conf.pbs_max_servers > 1) {
-		    srv_index = get_server_shard(shard_hint);
-		    return connection[channel].ch_shards[srv_index]->sd;
+		if (connection[channel].shard_context == -1) {
+			srv_index = get_server_shard(shard_hint);
+			connection[channel].shard_context = srv_index; /* reuse the same server in case of a dialogue */
+		} else {
+			srv_index = connection[channel].shard_context;
+		}
+		return  connection[channel].ch_shards[srv_index]->sd;
 
 	} else
 		sd = connection[channel].ch_socket;
@@ -1640,6 +1648,7 @@ main(int argc, char *argv[])
 						//return SCH_ERROR;
 					} else {
 						if (connector >= 0) {
+							pbs_sock_pair *p = NULL;
 							/* update sched object attributes on server */
 							update_svr_schedobj(connector, cmd, alarm_time);
 
@@ -1662,6 +1671,11 @@ main(int argc, char *argv[])
 
 							DBPRT(("Scheduler received command %d\n", cmd));
 				#endif /* localmod 031 */
+
+							p = get_sock_pair(connector, client_socks[i]);
+
+							if (p != NULL)
+								second_sd = p->secondary_sd;
 
 							if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
 								go = 0;

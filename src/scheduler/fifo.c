@@ -129,6 +129,7 @@ extern void win_toolong(void);
 #endif
 
 extern int	second_connection;
+extern int 	second_sd;
 extern int	get_sched_cmd_noblk(int sock, int *val, char **jobid);
 
 /**

@@ -166,19 +166,18 @@ get_sched_cmd_noblk(int sock, int *val, char **jid)
 {
 	struct timeval timeout;
 	fd_set		fdset;
-	pbs_sock_pair *p = NULL;
 	timeout.tv_usec = 0;
 	timeout.tv_sec  = 0;
-	extern int connector;
+	extern int second_sd;
 
-	if ((p = get_sock_pair(connector, sock)))
-		return 0;
+	/*if ((p = get_sock_pair(connector, sock)))
+		return 0;*/
 
 	FD_ZERO(&fdset);
-	FD_SET(p->secondary_sd, &fdset);
+	FD_SET(second_sd, &fdset);
 	if ((select(FD_SETSIZE, &fdset, NULL, NULL,
-		&timeout) != -1)  && (FD_ISSET(p->secondary_sd, &fdset))) {
-		return (get_sched_cmd(p->secondary_sd, val, jid));
+		&timeout) != -1)  && (FD_ISSET(second_sd, &fdset))) {
+		return (get_sched_cmd(second_sd, val, jid));
 	}
 	return (0);
 }
