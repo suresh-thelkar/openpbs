@@ -113,6 +113,7 @@ typedef struct pbs_sched {
 typedef struct pbs_sock_pair {
 	int primary_sd;
 	int secondary_sd;
+	int svr_idx;
 }pbs_sock_pair;
 
 enum towhich_conn {

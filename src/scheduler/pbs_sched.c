@@ -116,7 +116,7 @@
 struct	connect_handle connection[NCONNECTS];
 int		connector = -1;
 int		server_sock;
-int		*client_socks;
+pbs_sock_pair	**client_socks;
 int		client_sd;
 int		second_connection = -1;
 int		second_sd = -1;
@@ -744,6 +744,7 @@ accept_client(int *conn)
 	int		new_socket = -1;
 	pbs_socklen_t	slen;
 	int		i;
+	int		j;
 	pbs_net_t	addr;
 	int		client_port;
 	char		*svr_id = NULL;
@@ -823,10 +824,16 @@ accept_client(int *conn)
 	}
 
 
-	for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
-		if (client_socks[i] == 0) {
-			client_socks[i] = new_socket;
+	for (j = 0; j < pbs_conf.pbs_current_servers; j++) {
+		if (client_socks[j]->primary_sd == 0) {
+			client_socks[j]->primary_sd = new_socket;
+			client_socks[j]->svr_idx = i;
 			break;
+		} else {
+			if (client_socks[j]->svr_idx == i) {
+				client_socks[j]->secondary_sd = new_socket;
+				break;
+			}
 		}
 	}
 
@@ -1090,6 +1097,7 @@ main(int argc, char *argv[])
 	int      	char_in_cname = 0;
 #endif  /* RLIMIT_CORE */
 	int 		j;
+	int		client_idx;
 
 	/*the real deal or show version and exit?*/
 
@@ -1578,10 +1586,22 @@ main(int argc, char *argv[])
 	}
 
 	/* Doubling the size of client_socks to accommodate secondary sockets as well */
-	client_socks = calloc(2 * pbs_conf.pbs_max_servers, sizeof(int));
+	client_socks = calloc(pbs_conf.pbs_max_servers, sizeof(pbs_sock_pair *));
 	if (client_socks == NULL) {
 		log_err(errno, __func__, "Unable to allocate memory (calloc error)");
 		die(0);
+	}
+
+	for (client_idx = 0; client_idx < pbs_conf.pbs_max_servers; client_idx++) {
+		client_socks[client_idx] = (pbs_sock_pair *) malloc(sizeof(pbs_sock_pair));
+		if (client_socks[client_idx] == NULL) {
+			log_err(errno, __func__, "Unable to allocate memory (malloc error)");
+			die(0);
+		}
+		client_socks[client_idx]->svr_idx =-1;
+		client_socks[client_idx]->primary_sd = 0;
+		client_socks[client_idx]->secondary_sd = 0;
+
 	}
 
 	for (go=1; go;) {
@@ -1605,12 +1625,12 @@ main(int argc, char *argv[])
 				max_sd = rpp_fd;
 		}
 
-		for (i = 0; i< 2 * pbs_conf.pbs_current_servers; i++) {
-			if(client_socks[i] > 0)
-				FD_SET( client_socks[i], &fdset);
+		for (i = 0; i< pbs_conf.pbs_current_servers; i++) {
+			if(client_socks[i]->primary_sd > 0)
+				FD_SET( client_socks[i]->primary_sd, &fdset);
 
-			if(client_socks[i] > max_sd)
-				max_sd = client_socks[i];
+			if(client_socks[i]->primary_sd > max_sd)
+				max_sd = client_socks[i]->primary_sd;
 		 }
 
 		if (select(max_sd + 1, &fdset, NULL, NULL, NULL) == -1) {
@@ -1630,14 +1650,17 @@ main(int argc, char *argv[])
 			if (accept_client(&connector) != 0)
 				die(0);
 		} else {
-			for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
-				if (FD_ISSET(client_socks[i], &fdset)) {
-					if (get_sched_cmd(client_socks[i], &cmd, &runjobid) != 1) {
+			for (i = 0; i < pbs_conf.pbs_current_servers; i++) {
+				if (FD_ISSET(client_socks[i]->primary_sd, &fdset)) {
+					if (get_sched_cmd(client_socks[i]->primary_sd, &cmd, &runjobid) != 1) {
 						/*pbs_sock_pair *p = NULL;*/
 						log_err(errno, __func__, "get_sched_cmd");
-						CS_close_socket(client_socks[i]);
-						close(client_socks[i]);
-						client_socks[i] = 0;
+						CS_close_socket(client_socks[i]->primary_sd);
+						close(client_socks[i]->primary_sd);
+						client_socks[i]->primary_sd = 0;
+						CS_close_socket(client_socks[i]->secondary_sd);
+						close(client_socks[i]->secondary_sd);
+						client_socks[i]->secondary_sd = 0;
 						/* Also close its pairing socket */
 						/*p = get_sock_pair(connector, client_socks[i]);
 						if (p != NULL) {
@@ -1649,7 +1672,7 @@ main(int argc, char *argv[])
 						//return SCH_ERROR;
 					} else {
 						if (connector >= 0) {
-							pbs_sock_pair *p = NULL;
+							//pbs_sock_pair *p = NULL;
 							/* update sched object attributes on server */
 							update_svr_schedobj(connector, cmd, alarm_time);
 
@@ -1673,10 +1696,7 @@ main(int argc, char *argv[])
 							DBPRT(("Scheduler received command %d\n", cmd));
 				#endif /* localmod 031 */
 
-							p = get_sock_pair(connector, client_socks[i]);
-
-							if (p != NULL)
-								second_sd = p->secondary_sd;
+							second_sd = client_socks[i]->secondary_sd;
 
 							if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
 								go = 0;
@@ -1710,8 +1730,9 @@ main(int argc, char *argv[])
 	lock_out(lockfds, F_UNLCK);
 
 	(void)close(server_sock);
-	for (j = 0; j < 2 * pbs_conf.pbs_current_servers; j++) {
-		close(client_socks[j]);
+	for (j = 0; j < pbs_conf.pbs_current_servers; j++) {
+		close(client_socks[j]->primary_sd);
+		close(client_socks[j]->secondary_sd);
 	}
 	exit(0);
 }
