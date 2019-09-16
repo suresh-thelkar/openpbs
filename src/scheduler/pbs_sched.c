@@ -1633,18 +1633,19 @@ main(int argc, char *argv[])
 			for (i = 0; i < 2 * pbs_conf.pbs_current_servers; i++) {
 				if (FD_ISSET(client_socks[i], &fdset)) {
 					if (get_sched_cmd(client_socks[i], &cmd, &runjobid) != 1) {
-						pbs_sock_pair *p = NULL;
+						/*pbs_sock_pair *p = NULL;*/
 						log_err(errno, __func__, "get_sched_cmd");
 						CS_close_socket(client_socks[i]);
 						close(client_socks[i]);
+						client_socks[i] = 0;
 						/* Also close its pairing socket */
-						p = get_sock_pair(connector, client_socks[i]);
+						/*p = get_sock_pair(connector, client_socks[i]);
 						if (p != NULL) {
 							if (p->primary_sd == client_socks[i])
 								close(p->secondary_sd);
 							else if (p->secondary_sd == client_socks[i])
 								close(p->primary_sd);
-						}
+						}*/
 						//return SCH_ERROR;
 					} else {
 						if (connector >= 0) {
