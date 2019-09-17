@@ -385,20 +385,17 @@ schedule_high(pbs_sched *psched)
 	if ((psched = recov_sched_from_db(NULL, psched->sc_name, 0)))
 		return -1;
 
-	//if (psched->scheduler_sock == -1) {
-		if ((s = contact_sched(psched->svr_do_sched_high, NULL,  psched, PRIMARY)) < 0) {
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
-			sched_save_db(psched, SVR_SAVE_FULL);
-			return (-1);
-		}
-		//set_sched_sock(s, psched);
-		//if (psched->scheduler_sock2 == -1) {
-			if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, SECONDARY)) >= 0)
-				psched->scheduler_sock2 = s;
-		//}
-		psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
-		return 0;
-	//}
+	if ((s = contact_sched(psched->svr_do_sched_high, NULL,  psched, PRIMARY)) < 0) {
+		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
+		sched_save_db(psched, SVR_SAVE_FULL);
+		return (-1);
+	}
+
+	if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, SECONDARY)) >= 0)
+		psched->scheduler_sock2 = s;
+
+	psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
+	return 0;
 
 	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
 
@@ -477,11 +474,9 @@ schedule_jobs(pbs_sched *psched)
 	}
 	else if (pdefr != NULL)
 		pdefr->dr_sent = 1;   /* mark entry as sent to sched */
-	//set_sched_sock(s, psched);
-	if (psched->scheduler_sock2 == -1) {
-		if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY)) >= 0)
-			psched->scheduler_sock2 = s;
-	}
+
+	contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
+
 	psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 
 	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
