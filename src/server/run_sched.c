@@ -374,6 +374,7 @@ int
 schedule_high(pbs_sched *psched)
 {
 	int s;
+	static int second_conn_started = 0;
 	extern int sched_trx_chk;
 
 	if (psched == NULL)
@@ -391,8 +392,12 @@ schedule_high(pbs_sched *psched)
 		return (-1);
 	}
 
-	if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, SECONDARY)) >= 0)
-		psched->scheduler_sock2 = s;
+
+	if (!second_conn_started) {
+		if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, SECONDARY)) >= 0)
+			psched->scheduler_sock2 = s;
+		second_conn_started = 1;
+	}
 
 	psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
 	return 0;
@@ -426,6 +431,7 @@ schedule_jobs(pbs_sched *psched)
 	static int first_time = 1;
 	struct deferred_request *pdefr;
 	char  *jid = NULL;
+	static int second_conn_started = 0;
 	extern int sched_trx_chk;
 
 	if (psched == NULL)
@@ -475,7 +481,10 @@ schedule_jobs(pbs_sched *psched)
 	else if (pdefr != NULL)
 		pdefr->dr_sent = 1;   /* mark entry as sent to sched */
 
-	contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
+	if (!second_conn_started) {
+		contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
+		second_conn_started = 1;
+	}
 
 	psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 
