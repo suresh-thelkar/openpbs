@@ -120,7 +120,6 @@ common_libs = \
 
 pbs_sched_CPPFLAGS = ${common_cppflags}
 pbs_sched_LDADD = ${common_libs}
-pbs_sched_LDFLAGS = -z muldefs
 pbs_sched_SOURCES = pbs_sched.c
 
 pbsfs_CPPFLAGS = ${common_cppflags}

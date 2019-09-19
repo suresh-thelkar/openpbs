@@ -324,6 +324,7 @@ socket_to_conn(int sock, int index)
 			connection[i].ch_seconary_socket = -1;
 			connection[i].ch_errtxt = NULL;
 			connection[i].shard_context = -1;
+			connection[i].conn_exists = 1;
 
 			if (pbs_conf.pbs_max_servers > 1) {
 				if (connection[i].ch_shards == NULL) {
@@ -809,48 +810,6 @@ accept_client(int *conn)
 	return 0;
 
 }
-
-int
-get_svr_shard_connection(int channel, int req_type, void *shard_hint)
-{
-	int srv_index;
-	int sd;
-	int first_index = -1;
-
-	if (pbs_conf.pbs_max_servers > 1) {
-		if (connection[channel].shard_context == -1) {
-			srv_index = get_server_shard(shard_hint);
-			connection[channel].shard_context = srv_index; /* reuse the same server in case of a dialogue */
-		} else {
-			srv_index = connection[channel].shard_context;
-		}
-
-try_again:
-		if (first_index > -1) {
-			srv_index++;
-			if (srv_index >= get_current_servers()) {
-				srv_index = 0;
-			}
-			if (srv_index == first_index) {
-				return -1;
-			}
-		} else {
-			first_index = srv_index;
-		}
-
-		if ( connection[channel].ch_shards[srv_index]->state == SHARD_CONN_STATE_CONNECTED)
-			return  connection[channel].ch_shards[srv_index]->sd;
-		else {
-			goto try_again;
-		}
-
-	} else
-		sd = connection[channel].ch_socket;
-
-	return sd;
-}
-
-
 
 /**
  * @brief

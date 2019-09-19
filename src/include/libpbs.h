@@ -159,6 +159,7 @@ struct connect_handle {
 	struct shard_conn **ch_shards; /* handles to multiple sharded servers */
 	int 	shard_context; /* last server to which dialogue was going on */
 	int	ch_seconary_socket;
+	int	conn_exists;
 };
 extern struct connect_handle connection[];
 #define PBS_MAX_CONNECTIONS        5000  /* Max connections in the connections array */
