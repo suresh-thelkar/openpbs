@@ -170,9 +170,6 @@ get_sched_cmd_noblk(int sock, int *val, char **jid)
 	timeout.tv_sec  = 0;
 	extern int second_sd;
 
-	/*if ((p = get_sock_pair(connector, sock)))
-		return 0;*/
-
 	FD_ZERO(&fdset);
 	FD_SET(second_sd, &fdset);
 	if ((select(FD_SETSIZE, &fdset, NULL, NULL,

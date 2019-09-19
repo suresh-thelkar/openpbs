@@ -116,7 +116,6 @@
 struct	connect_handle connection[NCONNECTS];
 int		connector = -1;
 int		server_sock;
-pbs_sock_pair	**client_socks;
 int		client_sd;
 int		second_connection = -1;
 int		second_sd = -1;
@@ -744,7 +743,6 @@ accept_client(int *conn)
 	int		new_socket = -1;
 	pbs_socklen_t	slen;
 	int		i;
-	int		j;
 	pbs_net_t	addr;
 	int		client_port;
 	char		*svr_id = NULL;
@@ -795,22 +793,6 @@ accept_client(int *conn)
 	if (cmd == SCH_SVR_IDENTIFIER)
 		i = strtol(svr_id, &endp, 10);
 
-	/*if (pbs_conf.pbs_max_servers > 1) {
-		for(i = 0; i < pbs_conf.pbs_current_servers; i++) {
-			 TODO
-			 * Also need to check/validate hostname
-
-			if (client_port == pbs_conf.psi[i]->port) {
-				break;
-			}
-		}
-		if (i == pbs_conf.pbs_current_servers) {
-			badconn("unauthorized host");
-			close(new_socket);
-			return SCH_ERROR;
-		}
-	}*/
-
 	if ((connector = socket_to_conn(new_socket, i)) < 0) {
 		log_err(errno, __func__, "socket_to_conn");
 		close(new_socket);
@@ -821,20 +803,6 @@ accept_client(int *conn)
 		CS_close_socket(new_socket);
 		close(new_socket);
 		return SCH_ERROR;
-	}
-
-
-	for (j = 0; j < pbs_conf.pbs_current_servers; j++) {
-		if (client_socks[j]->primary_sd == 0) {
-			client_socks[j]->primary_sd = new_socket;
-			client_socks[j]->svr_idx = i;
-			break;
-		} else {
-			if (client_socks[j]->svr_idx == i) {
-				client_socks[j]->secondary_sd = new_socket;
-				break;
-			}
-		}
 	}
 
 	*conn = connector;
@@ -1116,7 +1084,6 @@ main(int argc, char *argv[])
 	int      	char_in_cname = 0;
 #endif  /* RLIMIT_CORE */
 	int 		j;
-	int		client_idx;
 
 	/*the real deal or show version and exit?*/
 
@@ -1604,25 +1571,6 @@ main(int argc, char *argv[])
 		}
 	}
 
-	/* Doubling the size of client_socks to accommodate secondary sockets as well */
-	client_socks = calloc(pbs_conf.pbs_max_servers, sizeof(pbs_sock_pair *));
-	if (client_socks == NULL) {
-		log_err(errno, __func__, "Unable to allocate memory (calloc error)");
-		die(0);
-	}
-
-	for (client_idx = 0; client_idx < pbs_conf.pbs_max_servers; client_idx++) {
-		client_socks[client_idx] = (pbs_sock_pair *) malloc(sizeof(pbs_sock_pair));
-		if (client_socks[client_idx] == NULL) {
-			log_err(errno, __func__, "Unable to allocate memory (malloc error)");
-			die(0);
-		}
-		client_socks[client_idx]->svr_idx =-1;
-		client_socks[client_idx]->primary_sd = 0;
-		client_socks[client_idx]->secondary_sd = 0;
-
-	}
-
 	for (go=1; go;) {
 		int	cmd;
 		int	max_sd;
@@ -1645,11 +1593,21 @@ main(int argc, char *argv[])
 		}
 
 		for (i = 0; i< pbs_conf.pbs_current_servers; i++) {
-			if(client_socks[i]->primary_sd > 0)
-				FD_SET( client_socks[i]->primary_sd, &fdset);
+			int sock_to_add;
+			if (connector == -1)
+				break;
+			if (pbs_conf.pbs_max_servers > 1) {
+				sock_to_add = connection[connector].ch_shards[i]->sd;
+			} else {
+				sock_to_add = connection[connector].ch_socket;
+			}
+			if(sock_to_add != -1)
+				FD_SET(sock_to_add, &fdset);
+			else
+				continue;
 
-			if(client_socks[i]->primary_sd > max_sd)
-				max_sd = client_socks[i]->primary_sd;
+			if(sock_to_add > max_sd)
+				max_sd = sock_to_add;
 		 }
 
 		if (select(max_sd + 1, &fdset, NULL, NULL, NULL) == -1) {
@@ -1670,28 +1628,30 @@ main(int argc, char *argv[])
 				die(0);
 		} else {
 			for (i = 0; i < pbs_conf.pbs_current_servers; i++) {
-				if (FD_ISSET(client_socks[i]->primary_sd, &fdset)) {
-					if (get_sched_cmd(client_socks[i]->primary_sd, &cmd, &runjobid) != 1) {
-						/*pbs_sock_pair *p = NULL;*/
-						log_err(errno, __func__, "get_sched_cmd");
-						CS_close_socket(client_socks[i]->primary_sd);
-						close(client_socks[i]->primary_sd);
-						client_socks[i]->primary_sd = 0;
-						CS_close_socket(client_socks[i]->secondary_sd);
-						close(client_socks[i]->secondary_sd);
-						client_socks[i]->secondary_sd = 0;
-						/* Also close its pairing socket */
-						/*p = get_sock_pair(connector, client_socks[i]);
-						if (p != NULL) {
-							if (p->primary_sd == client_socks[i])
-								close(p->secondary_sd);
-							else if (p->secondary_sd == client_socks[i])
-								close(p->primary_sd);
-						}*/
-						//return SCH_ERROR;
+				int sock_to_check;
+				if (connector == -1)
+					break;
+				if (pbs_conf.pbs_max_servers > 1) {
+					sock_to_check = connection[connector].ch_shards[i]->sd;
+				}
+				else
+					sock_to_check = connection[connector].ch_socket;
+
+				if ((sock_to_check != -1) && FD_ISSET(sock_to_check, &fdset)) {
+					if (get_sched_cmd(sock_to_check, &cmd, &runjobid) != 1) {
+						CS_close_socket(sock_to_check);
+						close(sock_to_check);
+						if (pbs_conf.pbs_max_servers > 1) {
+							connection[connector].ch_shards[i]->sd = -1;
+							connection[connector].ch_shards[i]->secondary_sd = -1;
+							connection[connector].ch_shards[i]->state = SHARD_CONN_STATE_DOWN;
+						}
+						else {
+							connection[connector].ch_socket = -1;
+							connection[connector].ch_seconary_socket = -1;
+						}
 					} else {
 						if (connector >= 0) {
-							//pbs_sock_pair *p = NULL;
 							/* update sched object attributes on server */
 							update_svr_schedobj(connector, cmd, alarm_time);
 
@@ -1715,7 +1675,11 @@ main(int argc, char *argv[])
 							DBPRT(("Scheduler received command %d\n", cmd));
 				#endif /* localmod 031 */
 
-							second_sd = client_socks[i]->secondary_sd;
+							if (pbs_conf.pbs_max_servers > 1)
+								second_sd = connection[connector].ch_shards[i]->secondary_sd;
+							else
+								second_sd = connection[connector].ch_seconary_socket;
+
 
 							if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
 								go = 0;
@@ -1750,8 +1714,15 @@ main(int argc, char *argv[])
 
 	(void)close(server_sock);
 	for (j = 0; j < pbs_conf.pbs_current_servers; j++) {
-		close(client_socks[j]->primary_sd);
-		close(client_socks[j]->secondary_sd);
+		if (pbs_conf.pbs_max_servers > 1) {
+			if (connector == -1)
+				break;
+			close(connection[connector].ch_shards[j]->sd);
+			close(connection[connector].ch_shards[j]->secondary_sd);
+		} else {
+			close(connection[connector].ch_socket);
+			close(connection[connector].ch_seconary_socket);
+		}
 	}
 	exit(0);
 }
