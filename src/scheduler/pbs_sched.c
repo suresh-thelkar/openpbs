@@ -115,6 +115,7 @@
 
 struct	connect_handle connection[NCONNECTS];
 int		connector = -1;
+int		conn_slot = -1;
 int		server_sock;
 int		client_sd;
 int		second_connection = -1;
@@ -291,10 +292,6 @@ server_disconnect(int connect)
 int
 socket_to_conn(int sock, int index)
 {
-	int     i;
-	int	j;
-	//static int first_time;
-
 	if (connector != -1) {
 		if (pbs_conf.pbs_max_servers > 1) {
 			if (connection[connector].ch_shards[index]->sd == -1)
@@ -312,61 +309,8 @@ socket_to_conn(int sock, int index)
 		}
 		return connector;
 	}
+	return -1;
 
-	for (i=0; i<NCONNECTS; i++) {
-		if (connection[i].ch_inuse == 0) {
-			if (pbs_client_thread_lock_conntable() != 0)
-				return -1;
-
-			connection[i].ch_inuse = 1;
-			connection[i].ch_errno = 0;
-			connection[i].ch_socket= -1;
-			connection[i].ch_seconary_socket = -1;
-			connection[i].ch_errtxt = NULL;
-			connection[i].shard_context = -1;
-			connection[i].conn_exists = 1;
-
-			if (pbs_conf.pbs_max_servers > 1) {
-				if (connection[i].ch_shards == NULL) {
-					if (!(connection[i].ch_shards = calloc(get_current_servers(), sizeof(struct shard_conn *)))) {
-						pbs_errno = PBSE_SYSTEM;
-						connection[i].ch_inuse = 0;
-						return -1;
-					}
-					for (j = 0; j < get_current_servers(); j++) {
-						connection[i].ch_shards[j] = malloc(sizeof(struct shard_conn));
-						connection[i].ch_shards[j]->sd = -1;
-						connection[i].ch_shards[j]->secondary_sd = -1;
-						connection[i].ch_shards[j]->state = SHARD_CONN_STATE_DOWN;
-						connection[i].ch_shards[j]->state_change_time = 0;
-						connection[i].ch_shards[j]->last_used = 0;
-					}
-
-					if (connection[i].ch_shards[index]->sd == -1)
-						connection[i].ch_shards[index]->sd = sock;
-					else
-						connection[i].ch_shards[index]->secondary_sd = sock;
-
-					connection[i].ch_shards[index]->state = SHARD_CONN_STATE_CONNECTED;
-					connection[i].ch_shards[index]->state_change_time = time(0);
-				}
-
-			} else {
-				if (connection[i].ch_socket != -1)
-					connection[i].ch_seconary_socket = sock;
-				else
-					connection[i].ch_socket= sock;
-			}
-
-			if (pbs_client_thread_unlock_conntable() != 0)
-				return -1;
-
-			return (i);
-		}
-	}
-
-	pbs_errno = PBSE_NOCONNECTS;
-	return (-1);
 }
 
 
@@ -607,136 +551,6 @@ badconn(char *msg)
  *		The returned *jid is a malloc-ed string which must be freed by the
  *		caller.
  */
-int
-server_command(char **jid)
-{
-	int		new_socket;
-	pbs_socklen_t	slen;
-	int		i;
-	int		cmd;
-	pbs_net_t	addr;
-	extern	int	get_sched_cmd(int sock, int *val, char **jobid);
-	fd_set		fdset;
-	struct timeval  timeout;
-
-	slen = sizeof(saddr);
-	new_socket = accept(server_sock,
-		(struct sockaddr *)&saddr, &slen);
-	if (new_socket == -1) {
-		log_err(errno, __func__, "accept");
-		return SCH_ERROR;
-	}
-
-	if (set_nodelay(new_socket) == -1) {
-		snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on primary socket connection %d (errno=%d)\n", new_socket, errno);
-		log_err(-1, __func__, log_buffer);
-		return SCH_ERROR;
-	}
-
-	if (ntohs(saddr.sin_port) >= IPPORT_RESERVED) {
-		badconn("non-reserved port");
-		close(new_socket);
-		return SCH_ERROR;
-	}
-
-	addr = (pbs_net_t)saddr.sin_addr.s_addr;
-	for (i=0; i<numclients; i++) {
-		if (addr == okclients[i])
-			break;
-	}
-	if (i == numclients) {
-		badconn("unauthorized host");
-		close(new_socket);
-		return SCH_ERROR;
-	}
-
-	if ((connector = socket_to_conn(new_socket, i)) < 0) {
-		log_err(errno, __func__, "socket_to_conn");
-		close(new_socket);
-		return SCH_ERROR;
-	}
-
-	if (engage_authentication(new_socket) == -1) {
-		CS_close_socket(new_socket);
-		close(new_socket);
-		return SCH_ERROR;
-	}
-
-	/* get_sched_cmd() located in file get_4byte.c */
-	if (get_sched_cmd(new_socket, &cmd, jid) != 1) {
-		log_err(errno, __func__, "get_sched_cmd");
-		CS_close_socket(new_socket);
-		close(new_socket);
-		return SCH_ERROR;
-	}
-
-	/* Obtain the second server socket connnection		*/
-	/* this second connection is for server to communicate	*/
-	/* "super" high priority command like			*/
-	/* SCH_SCHEDULE_RESTART_CYCLE				*/
-	/* This won't cause scheduling to quit if an error      */
-	/* resulted in obtaining this second connection.	*/
-	timeout.tv_usec = 0;
-	timeout.tv_sec  = 1;
-
-	FD_ZERO(&fdset);
-	FD_SET(server_sock, &fdset);
-	if ((select(FD_SETSIZE, &fdset, NULL, NULL,
-		&timeout) != -1)  && (FD_ISSET(server_sock, &fdset))) {
-		int	cmd2;
-		char	*jid2 = NULL;
-
-		second_connection = accept(server_sock,
-			(struct sockaddr *)&saddr, &slen);
-		if (second_connection == -1) {
-			log_err(errno, __func__,
-				"warning: failed to get second_connection");
-			return cmd; /* bail out early */
-		}
-
-		if (set_nodelay(second_connection) == -1) {
-			snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on secondary socket connection %d (errno=%d)\n", second_connection, errno);
-			log_err(-1, __func__, log_buffer);
-			return cmd;
-		}
-
-		if (ntohs(saddr.sin_port) >= IPPORT_RESERVED) {
-			badconn("second_connection: non-reserved port");
-			close(second_connection);
-			second_connection = -1;
-			return cmd;
-		}
-
-		addr = (pbs_net_t)saddr.sin_addr.s_addr;
-		for (i=0; i<numclients; i++) {
-			if (addr == okclients[i])
-				break;
-		}
-
-		if (i == numclients) {
-			badconn("second_connection: unauthorized host");
-			close(second_connection);
-			second_connection = -1;
-			return cmd;
-		}
-
-		if (get_sched_cmd(second_connection, &cmd2, &jid2) != 1) {
-			log_err(errno, __func__, "get_sched_cmd");
-			close(second_connection);
-			second_connection = -1;
-		}
-
-		if (jid2 != NULL) {
-			free(jid2);
-		}
-	} else {
-		log_event(PBSEVENT_DEBUG, LOG_DEBUG,
-			PBS_EVENTCLASS_SERVER, __func__,
-			"warning: timed-out getting second_connection");
-	}
-
-	return cmd;
-}
 
 int
 accept_client(int *conn)
@@ -1530,6 +1344,10 @@ main(int argc, char *argv[])
 		}
 	}
 
+	if ((conn_slot = initialise_connection_table(&connection[0], NCONNECTS)) == -1) {
+		log_err(-1, __func__, "connection table initialization failed");
+		die(0);
+	}
 	for (go=1; go;) {
 		int	cmd;
 		int	max_sd;
@@ -1583,6 +1401,9 @@ main(int argc, char *argv[])
 		}
 
 		if (FD_ISSET(server_sock, &fdset)) {
+			if (connector == -1) {
+				connector = conn_slot;
+			}
 			if (accept_client(&connector) != 0)
 				die(0);
 		} else {
