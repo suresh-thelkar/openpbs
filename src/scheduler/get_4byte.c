@@ -111,36 +111,6 @@ err:
 		return -1;
 }
 
-pbs_sock_pair *
-get_sock_pair(int connector, int sd)
-{
-	int i;
-	pbs_sock_pair *p1 = NULL;
-
-	p1 = malloc(sizeof(pbs_sock_pair));
-	if (p1 == NULL)
-		return p1;
-
-	if (pbs_conf.pbs_max_servers > 1) {
-		if (connection[connector].ch_shards != NULL) {
-			for (i = 0; i < get_current_servers(); i++) {
-				if ((connection[connector].ch_shards[i]->sd == sd) ||
-						(connection[connector].ch_shards[i]->secondary_sd == sd)) {
-					p1->primary_sd = connection[connector].ch_shards[i]->sd;
-					p1->secondary_sd = connection[connector].ch_shards[i]->secondary_sd;
-					return p1;
-				}
-			}
-			if (i == get_current_servers())
-				return NULL;
-		}
-	} else {
-		p1->primary_sd = connection[connector].ch_socket;
-		p1->secondary_sd = connection[connector].ch_seconary_socket;
-		return p1;
-	}
-	return NULL;
-}
 
 /**
  *

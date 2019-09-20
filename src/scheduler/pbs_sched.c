@@ -117,7 +117,6 @@ struct	connect_handle connection[NCONNECTS];
 int		connector = -1;
 int		conn_slot = -1;
 int		server_sock;
-int		client_sd;
 int		second_connection = -1;
 int		second_sd = -1;
 

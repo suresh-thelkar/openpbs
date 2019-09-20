@@ -282,7 +282,6 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
 		(void)contact_sched(SCH_ATTRS_CONFIGURE, NULL, psched, PRIMARY);
-		//(void)contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
 	}
 
 	return PBSE_NONE;
@@ -324,7 +323,6 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
 		(void)contact_sched(SCH_ATTRS_CONFIGURE, NULL, psched, PRIMARY);
-		//(void)contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
 
 	}
 
@@ -524,7 +522,6 @@ action_sched_partition(attribute *pattr, void *pobj, int actmode)
 			}
 		}
 		(void)contact_sched(SCH_ATTRS_CONFIGURE, NULL, pin_sched, PRIMARY);
-		//(void)contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
 	}
 
 	return PBSE_NONE;
