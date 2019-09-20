@@ -1343,7 +1343,7 @@ main(int argc, char *argv[])
 		}
 	}
 
-	if ((conn_slot = initialise_connection_table(&connection[0], NCONNECTS)) == -1) {
+	if ((conn_slot = initialise_connection_slot(&connection[0], NCONNECTS)) == -1) {
 		log_err(-1, __func__, "connection table initialization failed");
 		die(0);
 	}
@@ -1463,13 +1463,6 @@ main(int argc, char *argv[])
 							if (schedule(cmd, connector, runjobid)) /* magic happens here */ {
 								go = 0;
 							}
-	/*						if (second_connection != -1) {
-								close(second_connection);
-								second_connection = -1;
-							}
-
-							if (server_disconnect(connector))
-								connector = -1;*/
 
 							if (runjobid != NULL) {
 								free(runjobid);

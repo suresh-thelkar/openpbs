@@ -114,7 +114,7 @@ static struct   am_jobs {
 /* Functions private to this file */
 static void scheduler_close(int);
 
-#define SCHEDULER_ALARM_TIME 20
+#define SCHEDULER_ALARM_TIME 30
 /**
  * @brief
  * 		catchalrm	-	put a timeout alarm in case of timeout occurs when contacting the scheduler.
@@ -273,9 +273,11 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 {
 	int sock = -1;
 	conn_t *conn;
+/*
 #ifndef WIN32
 	struct sigaction act, oact;
 #endif
+*/
 	char my_index[pbs_conf.pbs_max_servers];
 
 	if ((cmd == SCH_SCHEDULE_AJOB) && (jobid == NULL))
@@ -286,12 +288,12 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 	/* connect to the Scheduler */
 	/* put a timeout alarm around the connect */
 
-	sigemptyset(&act.sa_mask);
+	/*sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
 	act.sa_handler = catchalrm;
 	if (sigaction(SIGALRM, &act, &oact) == -1)
 		return (PBS_NET_RC_RETRY);
-	alarm(SCHEDULER_ALARM_TIME);
+	alarm(SCHEDULER_ALARM_TIME * pbs_conf.pbs_current_servers);*/
 #endif
 
 	if ((which_conn == PRIMARY && psched->scheduler_sock == -1 )||
@@ -301,11 +303,13 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 		if (pbs_errno == PBSE_NOLOOPBACKIF)
 			log_err(PBSE_NOLOOPBACKIF, "client_to_svr" , msg_noloopbackif);
 
+/*
 	#ifndef WIN32
 		alarm(0);
 
-		(void)sigaction(SIGALRM, &oact, NULL);	/* reset handler for SIGALRM */
+		(void)sigaction(SIGALRM, &oact, NULL);	 reset handler for SIGALRM
 	#endif
+*/
 		if (sock < 0) {
 			log_err(errno, __func__, msg_sched_nocall);
 			return (-1);
@@ -386,7 +390,7 @@ schedule_high(pbs_sched *psched)
 	if ((psched = recov_sched_from_db(NULL, psched->sc_name, 0)))
 		return -1;
 
-	if ((s = contact_sched(psched->svr_do_sched_high, NULL,  psched, PRIMARY)) < 0) {
+	if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched, PRIMARY)) < 0) {
 		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
 		sched_save_db(psched, SVR_SAVE_FULL);
 		return (-1);
@@ -394,7 +398,7 @@ schedule_high(pbs_sched *psched)
 
 
 	if (!second_conn_started) {
-		if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, SECONDARY)) >= 0)
+		if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY)) >= 0)
 			psched->scheduler_sock2 = s;
 		second_conn_started = 1;
 	}

@@ -1539,7 +1539,7 @@ set_nodelay(int fd)
 }
 
 int
-initialise_connection_table(struct connect_handle * connection, int table_size)
+initialise_connection_slot(struct connect_handle * connection, int table_size)
 {
 	int i;
 	int j;
