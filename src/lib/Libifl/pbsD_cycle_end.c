@@ -117,8 +117,6 @@ __pbs_sched_cycle_end(int c, char *scname, int start_or_end, char *extend)
 	}
 
 	connection[c].ch_errno = rc;
-	if (rc == PBSE_PROTOCOL)
-		connection[c].ch_errtxt = strdup(dis_emsg[rc]);
 
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)

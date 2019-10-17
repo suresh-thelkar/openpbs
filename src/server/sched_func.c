@@ -406,6 +406,7 @@ poke_scheduler(attribute *pattr, void *pobj, int actmode)
 			if (pattr->at_val.at_long)
 				set_scheduler_flag(SCH_SCHEDULE_CMD, dflt_scheduler);
 		}
+		server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODCACHE;
 	} else {
 		if (actmode == ATR_ACTION_ALTER) {
 			if (pattr->at_val.at_long)

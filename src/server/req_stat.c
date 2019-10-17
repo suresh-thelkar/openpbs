@@ -1080,7 +1080,8 @@ req_stat_sched(struct batch_request *preq)
 
 		if (psched && strcmp(psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str, SC_DOWN) != 0) {
 			/* derive the scheduler state as this is transient and not going to save this in db */
-			if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
+			if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0 ||
+				psched->sched_cycle_started == 0)
 				set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
 						&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
 			else
@@ -1141,7 +1142,8 @@ req_stat_sched(struct batch_request *preq)
 
 					if (strcmp(psched->sch_attr[(int) SCHED_ATR_sched_state].at_val.at_str, SC_DOWN) != 0) {
 						/* derive the scheduler state as this is transient and not going to save this in db */
-						if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0)
+						if (psched->sch_attr[(int) SCHED_ATR_scheduling].at_val.at_long == 0 ||
+							psched->sched_cycle_started == 0)
 							set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
 									&sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
 						else
@@ -1642,13 +1644,15 @@ req_sched_cycle_end(struct batch_request *preq)
 	if (psched) {
 		if (preq->rq_ind.rq_sched_cycle_end.rq_start_or_stop == 1) {
 			psched->sched_cycle_started = 1;
+			reply_ack(preq);
 		}
 		else {
 			psched->sched_cycle_started = 0;
+			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
 		}
+		server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODCACHE;
 	}
 
-	reply_ack(preq);
 
 }
 

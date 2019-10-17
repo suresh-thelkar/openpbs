@@ -344,6 +344,7 @@ req_selectjobs(struct batch_request *preq)
 		req_reject(rc, bad, preq);
 		return;
 	}
+
 	/*
 	 * if the letter T (or t) is in the extend string,  select subjobs
 	 * if the letter S is in the extend string,  select real jobs,

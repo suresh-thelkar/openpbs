@@ -83,8 +83,10 @@ PBSD_sched_cycle_end_put(int sock, char *scname, int start_or_end, char *extend,
 		rc = pbs_errno;
 	}
 
-	reply = PBSD_rdrpy_sock(sock, &rc);
-	PBSD_FreeReply(reply);
+	if (start_or_end == 1) {
+		reply = PBSD_rdrpy_sock(sock, &rc);
+		PBSD_FreeReply(reply);
+	}
 
 	return rc;
 }

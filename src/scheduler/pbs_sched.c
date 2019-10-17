@@ -291,7 +291,7 @@ server_disconnect(int connect)
 void
 socket_to_conn(int sock, int index)
 {
-	if (pbs_conf.pbs_max_servers > 1) {
+	if (get_max_servers() > 1) {
 		if (connection[connector].ch_shards[index]->sd == -1) {
 			connection[connector].ch_shards[index]->sd = sock;
 			FD_SET(sock, &master_fdset);
@@ -311,7 +311,6 @@ socket_to_conn(int sock, int index)
 	}
 
 }
-
 
 /**
  * @brief
@@ -563,9 +562,6 @@ accept_client(int *max_sd)
 	int		cmd;
 	char		*endp;
 
-	sprintf(log_buffer, "accept_client called ");
-	schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE, __func__,
-		log_buffer);
 	slen = sizeof(saddr);
 	new_socket = accept(server_sock,
 		(struct sockaddr *)&saddr, &slen);
@@ -1364,7 +1360,7 @@ main(int argc, char *argv[])
 	FD_SET(server_sock, &master_fdset);
 	max_sd = server_sock;
 
-	if (pbs_conf.pbs_use_tcp == 0 && rpp_fd != -1) {
+	if ((pbs_conf.pbs_use_tcp == 0) && (rpp_fd != -1)) {
 		/*
 		 * with TPP, we don't need to drive rpp_io(), so
 		 * no need to add it to be monitored
@@ -1378,8 +1374,10 @@ main(int argc, char *argv[])
 		int	cmd;
 		int	i;
 
-		read_fdset = master_fdset;
-		if (select(max_sd + 1, &read_fdset, NULL, NULL, NULL) == -1) {
+		FD_ZERO(&read_fdset);
+		memcpy(&read_fdset, &master_fdset, sizeof(master_fdset));
+
+		if (select(max_sd + 1, &read_fdset, NULL, NULL, NULL) < 0) {
 			if (errno != EINTR) {
 				log_err(errno, __func__, "select");
 				die(0);
@@ -1387,7 +1385,7 @@ main(int argc, char *argv[])
 			continue;
 		}
 
-		if (pbs_conf.pbs_use_tcp == 0 && rpp_fd != -1 && FD_ISSET(rpp_fd, &read_fdset)) {
+		if ((pbs_conf.pbs_use_tcp == 0) && (rpp_fd != -1) && FD_ISSET(rpp_fd, &read_fdset)) {
 			if (rpp_io() == -1)
 				log_err(errno, __func__, "rpp_io");
 		}
@@ -1417,6 +1415,7 @@ main(int argc, char *argv[])
 						connection[connector].ch_shards[i]->sd = -1;
 						CS_close_socket(connection[connector].ch_shards[i]->secondary_sd);
 						close(connection[connector].ch_shards[i]->secondary_sd);
+						FD_CLR(connection[connector].ch_shards[i]->secondary_sd, &master_fdset);
 						connection[connector].ch_shards[i]->secondary_sd = -1;
 						connection[connector].ch_shards[i]->state = SHARD_CONN_STATE_DOWN;
 					}
@@ -1424,17 +1423,12 @@ main(int argc, char *argv[])
 						connection[connector].ch_socket = -1;
 						CS_close_socket(connection[connector].ch_secondary_socket);
 						close(connection[connector].ch_secondary_socket);
+						FD_CLR(connection[connector].ch_secondary_socket, &master_fdset);
 						connection[connector].ch_secondary_socket = -1;
 					}
-					sprintf(log_buffer, "get_sched_cmd EOF ret=%d ", ret);
-					schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE, __func__,
-						log_buffer);
+					log_err(errno, __func__, "get_sched_cmd");
 				} else {
 					if (connector >= 0) {
-						sprintf(log_buffer, "get_sched_cmd =%d ", cmd);
-						schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE, __func__,
-							log_buffer);
-
 						/* update sched object attributes on server */
 						update_svr_schedobj(connector, cmd, alarm_time);
 
@@ -1488,10 +1482,6 @@ main(int argc, char *argv[])
 									errmsg, pbs_errno);
 							schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE, __func__,
 								log_buffer);
-						} else {
-							sprintf(log_buffer, "pbs_sched_cycle_end while sending sched cycle end successful ");
-							schdlog(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE, __func__,
-								log_buffer);
 						}
 
 						if (runjobid != NULL) {
@@ -1513,16 +1503,18 @@ main(int argc, char *argv[])
 	lock_out(lockfds, F_UNLCK);
 
 	(void)close(server_sock);
-	for (j = 0; j < pbs_conf.pbs_current_servers; j++) {
+
+	if (connector != -1) {
 		if (get_max_servers() > 1) {
-			if (connector == -1)
-				break;
-			close(connection[connector].ch_shards[j]->sd);
-			close(connection[connector].ch_shards[j]->secondary_sd);
+			for (j = 0; j < get_current_servers(); j++) {
+				close(connection[connector].ch_shards[j]->sd);
+				close(connection[connector].ch_shards[j]->secondary_sd);
+			}
 		} else {
 			close(connection[connector].ch_socket);
 			close(connection[connector].ch_secondary_socket);
 		}
 	}
+
 	exit(0);
 }

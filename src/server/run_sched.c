@@ -336,6 +336,7 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 		return (-1);
 	}
 	psched->sched_cycle_started = 1;
+
 	(void)sprintf(log_buffer, msg_sched_called, cmd);
 	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_INFO,
 		server_name, log_buffer);
@@ -372,12 +373,6 @@ schedule_high(pbs_sched *psched)
 			sched_save_db(psched, SVR_SAVE_FULL);
 			return (-1);
 		}
-
-		sprintf(log_buffer, "schedule_high called with cmd %d", psched->svr_do_sched_high);
-		log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE,
-			server_name, log_buffer);
-
-
 		psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
 		return 0;
 
@@ -461,11 +456,6 @@ schedule_jobs(pbs_sched *psched)
 		}
 		else if (pdefr != NULL)
 			pdefr->dr_sent = 1;   /* mark entry as sent to sched */
-
-		sprintf(log_buffer, "schedule_jobs called with cmd %d", cmd);
-		log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE,
-			server_name, log_buffer);
-
 		psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 
 		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
@@ -529,7 +519,6 @@ scheduler_close(int sock)
 
 	set_sched_sock(-1, psched);
 
-
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;
 	scheduler_jobs_stat = 0;
@@ -561,6 +550,7 @@ scheduler_close(int sock)
 		pdefr = next_pdefr;
 	}
 	psched->sched_cycle_started = 0;
+	server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODCACHE;
 }
 
 /**

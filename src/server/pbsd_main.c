@@ -2080,8 +2080,7 @@ try_db_again:
 					 * request, then do schedule_jobs irrespective of the server scheduling
 					 * state.
 					 * If svr_unsent_qrun_req is not set then do the existing checking and do
-					 * scheduling only if server scheduling i
-					 * s turned on.
+					 * scheduling only if server scheduling is turned on.
 					 */
 
 					psched->sch_next_schedule = time_now +
