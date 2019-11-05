@@ -114,7 +114,7 @@ static struct   am_jobs {
 /* Functions private to this file */
 static void scheduler_close(int);
 
-#define SCHEDULER_ALARM_TIME 20
+#define SCHEDULER_ALARM_TIME 30
 /**
  * @brief
  * 		catchalrm	-	put a timeout alarm in case of timeout occurs when contacting the scheduler.
@@ -127,6 +127,57 @@ catchalrm(int sig)
 	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_NOTICE,
 		server_name, "timeout attempting to contact scheduler");
 }
+
+int
+send_int(int sock, int num)
+{
+        int32_t conv = htonl(num);
+        char *data = (char*)&conv;
+        int left = sizeof(conv);
+        int rc;
+        do {
+                rc = write(sock, data, left);
+                if (rc < 0) {
+                    if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                        continue;
+                    }
+                    else if (errno != EINTR) {
+                        return -1;
+                    }
+                }
+                else {
+                    data += rc;
+                    left -= rc;
+                }
+        } while (left > 0);
+
+        return 0;
+}
+
+int
+send_str(int sock, char *str)
+{
+        int left = strlen(str);
+        int rc;
+        do {
+                rc = write(sock, str, left);
+                if (rc < 0) {
+                    if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+                        continue;
+                    }
+                    else if (errno != EINTR) {
+                        return -1;
+                    }
+                }
+                else {
+                    str += rc;
+                    left -= rc;
+                }
+        } while (left > 0);
+
+        return 0;
+}
+
 
 /**
  * @brief
@@ -142,24 +193,28 @@ catchalrm(int sig)
  */
 
 int
-put_sched_cmd(int sock, int cmd, char *jobid)
+put_sched_cmd(int sock, int cmd, char *identifier)
 {
-	int   ret;
+	int bytes_tosend;
 
-	DIS_tcp_setup(sock);
-	if ((ret = diswsi(sock, cmd)) != DIS_SUCCESS)
+	if (send_int(sock, cmd)) {
 		goto err;
-
-	if (cmd == SCH_SCHEDULE_AJOB) {
-		if ((ret = (diswst(sock, jobid))) != DIS_SUCCESS)
+	}
+	if ((cmd == SCH_SCHEDULE_AJOB) || (cmd == SCH_SVR_IDENTIFIER)) {
+		bytes_tosend = strlen(identifier);
+		if (bytes_tosend == 0)
 			goto err;
+		if (send_int(sock, bytes_tosend)) {
+			goto err;
+		}
+		if (send_str(sock, identifier)) {
+			goto err;
+		}
 	}
 
-	(void)DIS_tcp_wflush(sock);
 	return 0;
-
 err:
-	sprintf(log_buffer, "write to scheduler failed, err=%d", ret);
+	sprintf(log_buffer, "put_sched_cmd end errno =%d", errno);
 	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_INFO, server_name,
 		log_buffer);
 	return -1;
@@ -269,62 +324,64 @@ find_sched_from_sock(int sock)
  */
 
 int
-contact_sched(int cmd, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int pbs_scheduler_port)
+contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_conn)
 {
-	int sock;
+	int sock = -1;
 	conn_t *conn;
-#ifndef WIN32
-	struct sigaction act, oact;
-#endif
+	char my_index[MAX_SVR_INDEX] = {'\0'};
 
 	if ((cmd == SCH_SCHEDULE_AJOB) && (jobid == NULL))
 		return -1;	/* need a jobid */
 
-#ifndef WIN32
+	if (((which_conn == PRIMARY )&& (psched->scheduler_sock == -1) )||
+			((which_conn == SECONDARY) && (psched->scheduler_sock2 == -1))) {
+		/* Under win32, this function does a timeout wait on the non-blocking socket */
+		sock = client_to_svr(psched->pbs_scheduler_addr, psched->pbs_scheduler_port, 1); /* scheduler connection still uses resv-ports */
+		if (pbs_errno == PBSE_NOLOOPBACKIF)
+			log_err(PBSE_NOLOOPBACKIF, "client_to_svr" , msg_noloopbackif);
 
-	/* connect to the Scheduler */
-	/* put a timeout alarm around the connect */
+		if (sock < 0) {
+			log_err(errno, __func__, msg_sched_nocall);
+			return (-1);
+		}
+		conn = add_conn_priority(sock, FromClientDIS, psched->pbs_scheduler_addr,
+			psched->pbs_scheduler_port, process_request, PRIORITY_CONNECTION);
+		if (!conn) {
+			log_err(errno, __func__, "could not find sock in connection table");
+			return (-1);
+		}
+		conn->cn_authen |=
+			PBS_NET_CONN_FROM_PRIVIL | PBS_NET_CONN_AUTHENTICATED | PBS_NET_CONN_NOTIMEOUT;
 
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = 0;
-	act.sa_handler = catchalrm;
-	if (sigaction(SIGALRM, &act, &oact) == -1)
-		return (PBS_NET_RC_RETRY);
-	alarm(SCHEDULER_ALARM_TIME);
-#endif
+		net_add_close_func(sock, scheduler_close);
 
-	/* Under win32, this function does a timeout wait on the non-blocking socket */
-	sock = client_to_svr(pbs_scheduler_addr, pbs_scheduler_port, 1); /* scheduler connection still uses resv-ports */
-	if (pbs_errno == PBSE_NOLOOPBACKIF)
-		log_err(PBSE_NOLOOPBACKIF, "client_to_svr" , msg_noloopbackif);
+		if (set_nodelay(sock) == -1) {
+	#ifdef WIN32
+			errno = WSAGetLastError();
+	#endif
+			snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
+			log_err(-1, __func__, log_buffer);
+			return (-1);
+		}
 
-#ifndef WIN32
-	alarm(0);
+		snprintf(my_index, MAX_SVR_INDEX, "%d", get_my_index());
+		if (put_sched_cmd(sock, SCH_SVR_IDENTIFIER, my_index) < 0) {
+			close_conn(sock);
+			return (-1);
+		}
 
-	(void)sigaction(SIGALRM, &oact, NULL);	/* reset handler for SIGALRM */
-#endif
-	if (sock < 0) {
-		log_err(errno, __func__, msg_sched_nocall);
-		return (-1);
+		if (which_conn == PRIMARY)
+			psched->scheduler_sock = sock;
+		else
+			psched->scheduler_sock2 = sock;
+		return sock;
 	}
-	conn = add_conn_priority(sock, FromClientDIS, pbs_scheduler_addr,
-		pbs_scheduler_port, process_request, PRIORITY_CONNECTION);
-	if (!conn) {
-		log_err(errno, __func__, "could not find sock in connection table");
-		return (-1);
-	}
-	conn->cn_authen |=
-		PBS_NET_CONN_FROM_PRIVIL | PBS_NET_CONN_AUTHENTICATED;
 
-	net_add_close_func(sock, scheduler_close);
-
-	if (set_nodelay(sock) == -1) {
-#ifdef WIN32
-		errno = WSAGetLastError();
-#endif
-		snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
-		log_err(-1, __func__, log_buffer);
-		return (-1);
+	if (sock == -1) {
+		if ((which_conn == PRIMARY) && (psched->scheduler_sock != -1))
+			sock = psched->scheduler_sock;
+		if ((which_conn == SECONDARY) && (psched->scheduler_sock2 != -1))
+			sock = psched->scheduler_sock2;
 	}
 
 	/* send command to Scheduler */
@@ -333,6 +390,8 @@ contact_sched(int cmd, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int p
 		close_conn(sock);
 		return (-1);
 	}
+	psched->sched_cycle_started = 1;
+
 	(void)sprintf(log_buffer, msg_sched_called, cmd);
 	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_INFO,
 		server_name, log_buffer);
@@ -357,28 +416,25 @@ schedule_high(pbs_sched *psched)
 	if (psched == NULL)
 		return -1;
 
-	memcache_roll_sched_trx();
+	if (psched->sched_cycle_started == 0) {
+		memcache_roll_sched_trx();
 
-	sched_trx_chk = SCHED_TRX_CHK;
-	if ((psched = recov_sched_from_db(NULL, psched->sc_name, 0)))
-		return -1;
+		sched_trx_chk = SCHED_TRX_CHK;
+		if ((psched = recov_sched_from_db(NULL, psched->sc_name, 0)))
+			return -1;
 
-	if (psched->scheduler_sock == -1) {
-		if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
+		if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched, SECONDARY)) < 0) {
 			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
 			sched_save_db(psched, SVR_SAVE_FULL);
 			return (-1);
 		}
-		set_sched_sock(s, psched);
-		if (psched->scheduler_sock2 == -1) {
-			if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) >= 0)
-				psched->scheduler_sock2 = s;
-		}
 		psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
 		return 0;
-	}
 
-	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+	} else {
+		return 1;
+	}
 
 	return 1;
 }
@@ -417,8 +473,7 @@ schedule_jobs(pbs_sched *psched)
 	else
 		cmd = psched->svr_do_schedule;
 
-	if (psched->scheduler_sock == -1) {
-
+	if (psched->sched_cycle_started == 0) {
 		/* are there any qrun requests from manager/operator */
 		/* which haven't been sent,  they take priority      */
 		pdefr = (struct deferred_request *)GET_NEXT(svr_deferred_req);
@@ -449,18 +504,13 @@ schedule_jobs(pbs_sched *psched)
 		if ((psched = recov_sched_from_db(NULL, psched->sc_name, 0)) == NULL)
 			return -1;
 
-		if ((s = contact_sched(cmd, jid, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
+		if ((s = contact_sched(cmd, jid,  psched, SECONDARY)) < 0) {
 			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
 			sched_save_db(psched, SVR_SAVE_FULL);
 			return (-1);
 		}
 		else if (pdefr != NULL)
 			pdefr->dr_sent = 1;   /* mark entry as sent to sched */
-		set_sched_sock(s, psched);
-		if (psched->scheduler_sock2 == -1) {
-			if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) >= 0)
-				psched->scheduler_sock2 = s;
-		}
 		psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 
 		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
@@ -479,10 +529,11 @@ schedule_jobs(pbs_sched *psched)
 			}
 			pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
 		}
+	} else {
+		return 1;
+	}
 
-		return (0);
-	} else
-		return (1);	/* scheduler was busy */
+	return (0);
 
 }
 
@@ -514,14 +565,16 @@ scheduler_close(int sock)
 	if (psched == NULL)
 		return;
 
+	psched->sched_cycle_started = 0;
+
 	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
 
-	if ((sock != -1) && (sock == psched->scheduler_sock2)) {
-		psched->scheduler_sock2 = -1;
+	if ((sock != -1) && (sock == psched->scheduler_sock)) {
+		psched->scheduler_sock = -1;
 		return;	/* nothing to check if scheduler_sock2 */
 	}
 
-	set_sched_sock(-1, psched);
+	psched->scheduler_sock2 = -1;
 
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;
@@ -553,6 +606,8 @@ scheduler_close(int sock)
 		}
 		pdefr = next_pdefr;
 	}
+
+	server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODCACHE;
 }
 
 /**
@@ -727,3 +782,9 @@ db_to_svr_sched(struct pbs_sched *ps, pbs_db_sched_info_t *pdbsched)
 	return 0;
 }
 
+void
+connect_to_scheduler(pbs_sched *psched)
+{
+	(void)contact_sched(SCH_SCHEDULE_NULL, NULL,  psched, PRIMARY);
+	(void)contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY);
+}
