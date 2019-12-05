@@ -1446,6 +1446,9 @@ update_job_attr(int pbs_sd, resource_resv *resresv, char *attr_name,
 	struct attrl *pattr2 = NULL;
 	struct attrl *end;
 
+	/* Following code changes are just to check performance */
+	return 1;
+
 	if (resresv == NULL  ||
 		(attr_name == NULL && attr_value == NULL && extra == NULL))
 		return -1;

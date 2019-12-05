@@ -718,6 +718,11 @@ recov_sched_from_db(char *partition, char *sched_name, int lock)
 		ps = find_scheduler(dbsched.sched_name);
 	}
 
+	/* Following change is just to check performance
+	 *
+	 */
+	return ps;
+
 	if (ps) {
 		if (memcache_good(&ps->trx_status, 0))
 			return ps;

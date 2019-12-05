@@ -650,7 +650,7 @@ pbsd_init(int type)
 		if (!dflt_scheduler) {
 			dflt_scheduler = sched_alloc(PBS_DFLT_SCHED_NAME, 1);
 			set_sched_default(dflt_scheduler, 0);
-			(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);
+			/*(void)sched_save_db(dflt_scheduler, SVR_SAVE_NEW);*/
 		}
 		pbs_db_end_trx(conn, PBS_DB_COMMIT);
 		dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
