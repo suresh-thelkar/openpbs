@@ -1776,7 +1776,6 @@ mgr_sched_set(struct batch_request *preq)
 		pbs_db_end_trx(conn, PBS_DB_ROLLBACK);
 	}
 	else {
-		set_sched_default(psched);
 		(void)sched_save_db(psched, SVR_SAVE_FULL);
 		if (pbs_db_end_trx(conn, PBS_DB_COMMIT) != 0) {
 			req_reject(PBSE_SYSTEM, 0, preq);

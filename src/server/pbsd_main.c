@@ -1873,7 +1873,7 @@ try_db_again:
 
 	/* record the fact that the Secondary is up and active (running) */
 
-	if (pbs_failover_active) {
+	if ((get_max_servers() == 1) && pbs_failover_active) {
 		sprintf(log_buffer, "Failover Secondary Server at %s has gone active", server_host);
 		log_event(PBSEVENT_SYSTEM | PBSEVENT_FORCE, PBS_EVENTCLASS_SERVER,
 			LOG_CRIT, msg_daemonname, log_buffer);
@@ -1965,7 +1965,7 @@ try_db_again:
 	if ((pc=strchr(svr_interp_data.local_host_name, '.')) != NULL)
 		*pc = '\0';
 
-	if (server_init_type != RECOV_CREATE) {
+	if ((get_max_servers() == 1) && (server_init_type != RECOV_CREATE)) {
 		connect_to_scheduler(dflt_scheduler);
 	}
 	pbs_python_ext_start_interpreter(&svr_interp_data);
@@ -1985,12 +1985,14 @@ try_db_again:
 	}
 	process_hooks(periodic_req, hook_msg, sizeof(hook_msg), pbs_python_set_interrupt);
 
-	if (server_init_type != RECOV_CREATE) {
-		/*
-		 * Make the scheduler (re)-read the configuration
-		 * and fairshare usage.
-		 */
-		(void)contact_sched(SCH_CONFIGURE, NULL,  dflt_scheduler, SECONDARY);
+	if (get_max_servers() == 1) {
+		if (server_init_type != RECOV_CREATE) {
+			/*
+			 * Make the scheduler (re)-read the configuration
+			 * and fairshare usage.
+			 */
+			(void)contact_sched(SCH_CONFIGURE, NULL,  dflt_scheduler, SECONDARY);
+		}
 	}
 
 	/*
@@ -2158,7 +2160,7 @@ try_db_again:
 
 	/* if brought up the Secondary Scheduler, take it down */
 
-	if (brought_up_alt_sched == 1)
+	if ((get_max_servers() == 1) && (brought_up_alt_sched == 1))
 		(void)contact_sched(SCH_QUIT, NULL,  dflt_scheduler, SECONDARY);
 
 	/* if Moms are to to down as well, tell them */
