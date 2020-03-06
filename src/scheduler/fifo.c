@@ -118,6 +118,7 @@
 #include "buckets.h"
 #include "multi_threading.h"
 #include "pbs_python.h"
+#include "globals.h"
 
 #ifdef NAS
 #include "site_code.h"
@@ -129,6 +130,7 @@ static int last_running_size = 0;
 
 extern int	second_connection;
 extern int	get_sched_cmd_noblk(int sock, int *val, char **jobid);
+extern int 	get_sched_cmd(int sock, int *val, char **identifier);
 
 /**
  * @brief
@@ -569,7 +571,7 @@ schedule(int cmd, int sd, char *runjobid)
 			 * This is required since there is a probability that scheduler's configuration has been changed at
 			 * server through qmgr.
 			 */
-			if (!validate_sched_attrs(connector)) {
+			if (!validate_sched_attrs(sd)) {
 				return 0;
 			}
 			break;
@@ -1085,16 +1087,21 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 		if (!end_cycle) {
 			if (second_connection != -1) {
 				char *jid = NULL;
+				int ret;
 
-				/* get_sched_cmd_noblk() located in file get_4byte.c */
-				if ((get_sched_cmd_noblk(second_connection, &cmd, &jid) == 1) &&
-					(cmd == SCH_SCHEDULE_RESTART_CYCLE)) {
-					log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING,
-						njob->name, "Leaving scheduling cycle as requested by server.");
-					end_cycle = 1;
+				ret = get_sched_cmd_noblk(second_connection, &cmd, &jid);
+
+				if (ret == 1){
+					/* get_sched_cmd_noblk() located in file get_4byte.c */
+					if (cmd == SCH_SCHEDULE_RESTART_CYCLE) {
+						log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING, njob->name,
+							"Leaving scheduling cycle as requested by server.");
+						end_cycle = 1;
+					}
+					if (jid != NULL)
+						free(jid);
 				}
-				if (jid != NULL)
-					free(jid);
+
 			}
 		}
 
@@ -2525,7 +2532,7 @@ sched_settings_frm_svr(struct batch_status *status)
 				patt->value = "0";
 				patt->next = NULL;
 
-				err = pbs_manager(connector,
+				err = pbs_manager(svr_sock_pair.ch_socket,
 					MGR_CMD_SET, MGR_OBJ_SCHED,
 					sc_name, attribs, NULL);
 				free(attribs);
@@ -2609,7 +2616,7 @@ sched_settings_frm_svr(struct batch_status *status)
 			patt->name = ATTR_scheduling;
 			patt->value = "0";
 			patt->next = NULL;
-			err = pbs_manager(connector,
+			err = pbs_manager(svr_sock_pair.ch_socket,
 				MGR_CMD_SET, MGR_OBJ_SCHED,
 				sc_name, attribs, NULL);
 			free(attribs);
@@ -2641,7 +2648,7 @@ sched_settings_frm_svr(struct batch_status *status)
 		}
 		patt->value[0] = '\0';
 		patt->next = NULL;
-		err = pbs_manager(connector,
+		err = pbs_manager(svr_sock_pair.ch_socket,
 				MGR_CMD_UNSET, MGR_OBJ_SCHED,
 			sc_name, attribs, NULL);
 		free(attribs->value);
