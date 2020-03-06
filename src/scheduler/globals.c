@@ -146,7 +146,9 @@ struct status cstat;
 int pbs_rm_port;
 int got_sigpipe;
 
-int	second_connection;
+int	second_sd;
+
+
 
 /* Stuff needed for multi-threading */
 pthread_mutex_t general_lock;
@@ -181,3 +183,4 @@ char *logfile = NULL;
 char path_log[_POSIX_PATH_MAX];
 int dflt_sched = 0;
 int server_dyn_res_alarm = 0;
+pbs_svr_sock_pair svr_sock_pair;

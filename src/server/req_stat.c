@@ -1211,3 +1211,35 @@ req_stat_resc(struct batch_request *preq)
 	}
 }
 
+/**
+ * @brief
+ * 		recv_cycle_end - Receives end of cycle notification from the corresponding Scheduler
+ *
+ * @param[in]	sock	-	socket to read
+ *
+ * @return	int
+ * @retval	0	: on success
+ * @retval	-1	: on error
+ */
+int
+recv_cycle_end(int sock)
+{
+	pbs_sched *psched;
+	int rc;
+	for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
+		if (psched->scheduler_sock2 == sock) {
+			rc = recv_int(sock, &(psched->sched_cycle_started));
+			if (rc == -1) {
+				log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR,
+					__func__, "Not able to receive sched cycle end, errno = %d", errno);
+				psched->scheduler_sock2 = -1;
+				psched->sched_cycle_started = 0;
+				set_sched_state(psched, SC_DOWN);
+			} else
+				set_sched_state(psched, SC_IDLE);
+			return rc;
+		}
+	}
+	return 0;
+}
+

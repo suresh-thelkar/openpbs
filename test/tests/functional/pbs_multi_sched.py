@@ -2033,8 +2033,8 @@ e.accept()
             self.server.expect(RESV, attr, rid)
             partition = self.server.status(RESV, 'partition', id=rid)
             if (partition[0]['partition'] == 'P1'):
-                    old_end_time = a['reserve_end']
-                    modify_resv = rid
+                old_end_time = a['reserve_end']
+                modify_resv = rid
         # Modify the endtime of reservation confirmed on partition P1 and
         # make sure the node solution is correct.
         end_time = old_end_time + 60
@@ -2225,3 +2225,15 @@ e.accept()
         a = {ATTR_job: jid, 'reserve_state': (MATCH_RE, 'RESV_RUNNING|5'),
              'partition': 'P1'}
         self.server.expect(RESV, a, id=rid)
+
+    def test_my_expt(self):
+        self.common_setup()
+        self.server.restart()
+        a = {'Resource_List.select': '1:ncpus=1', ATTR_q: 'wq1'}
+        job = Job(TEST_USER, a)
+        jid = self.server.submit(job)
+        self.server.expect(JOB, {ATTR_state: 'R'}, jid)
+
+        job1 = Job(TEST_USER, a)
+        jid1 = self.server.submit(job1)
+        self.server.expect(JOB, {ATTR_state: 'R'}, jid1)

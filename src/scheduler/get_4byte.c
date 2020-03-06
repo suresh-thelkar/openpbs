@@ -66,8 +66,9 @@
  *
  * @param[in]	sock	-	socket endpoint to the server
  * @param[in]	val	-	pointer to the value of the scheduler command sent.
- * @param[in]	jid	-	if 'val' obtained is SCH_SCHEDULE_AJOB, then '*jid'
- *						holds the jobid of the job to be scheduled.
+ * @param[in]	identifier	-	if 'val' obtained is SCH_SCHEDULE_AJOB, then '*identifier" is  job id.
+ * 					else if 'val' obtained is SCH_SVR_IDENTIFIER then '*identifier" is index of the Server.
+ *					holds the jobid of the job to be scheduled.
  * @return	int
  * @retval	0	: for EOF,
  * @retval	+1	: for success
@@ -79,24 +80,25 @@
  */
 
 int
-get_sched_cmd(int sock, int *val, char **jid)
+get_sched_cmd(int sock, int *val, char **identifier)
 {
 	int	i;
 	int     rc = 0;
-	char	*jobid = NULL;
+	char	*id = NULL;
 
 	DIS_tcp_funcs();
 
 	i = disrsi(sock, &rc);
 	if (rc != 0)
 		goto err;
-	if (i == SCH_SCHEDULE_AJOB) {
-		jobid = disrst(sock, &rc);
+	if (i == SCH_SCHEDULE_AJOB || i == SCH_SVR_IDENTIFIER) {
+		id = disrst(sock, &rc);
 		if (rc != 0)
 			goto err;
-		*jid = jobid;
+		*identifier = id;
 	} else {
-		*jid = NULL;
+		if (identifier != NULL)
+			*identifier = NULL;
 	}
 	*val = i;
 	return 1;
@@ -134,12 +136,13 @@ get_sched_cmd_noblk(int sock, int *val, char **jid)
 	fd_set		fdset;
 	timeout.tv_usec = 0;
 	timeout.tv_sec  = 0;
+	extern int second_sd;
 
 	FD_ZERO(&fdset);
-	FD_SET(sock, &fdset);
+	FD_SET(second_sd, &fdset);
 	if ((select(FD_SETSIZE, &fdset, NULL, NULL,
-		&timeout) != -1)  && (FD_ISSET(sock, &fdset))) {
-		return (get_sched_cmd(sock, val, jid));
+		&timeout) != -1)  && (FD_ISSET(second_sd, &fdset))) {
+		return (get_sched_cmd(second_sd, val, jid));
 	}
 	return (0);
 }

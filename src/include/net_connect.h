@@ -232,6 +232,7 @@ struct connection {
 	void            *cn_data;         /* pointer to some data for cn_func */
 	char            cn_username[PBS_MAXUSER + 1];
 	char            cn_hostname[PBS_MAXHOSTNAME + 1];
+	int		is_sched_conn; /* used to know whether connection is from Scheduler or not */
 	char            *cn_credid;
 	char            cn_physhost[PBS_MAXHOSTNAME + 1];
 	pbs_auth_config_t   *cn_auth_config;
