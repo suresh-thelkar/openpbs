@@ -619,7 +619,7 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 	if (pobj == dflt_scheduler)
 		return PBSE_SCHED_OP_NOT_PERMITTED;
 
-	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode != ATR_ACTION_RECOV) {
 		psched = (pbs_sched *) GET_NEXT(svr_allscheds);
 		while (psched != NULL) {
 			if (psched->sch_attr[SCHED_ATR_sched_priv].at_flags & ATR_VFLAG_SET) {
@@ -632,9 +632,9 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 			}
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
-	}
-	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER)
 		set_scheduler_flag(SCH_ATTRS_CONFIGURE, psched);
+	}
+
 	return PBSE_NONE;
 }
 
@@ -660,7 +660,7 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 	if (pobj == dflt_scheduler)
 		return PBSE_SCHED_OP_NOT_PERMITTED;
 
-	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
+	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode != ATR_ACTION_RECOV) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
 		while (psched != NULL) {
 			if (psched->sch_attr[SCHED_ATR_sched_log].at_flags & ATR_VFLAG_SET) {
@@ -673,12 +673,12 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 			}
 			psched = (pbs_sched*) GET_NEXT(psched->sc_link);
 		}
-	}
-	if (actmode != ATR_ACTION_RECOV)
 		set_scheduler_flag(SCH_ATTRS_CONFIGURE, psched);
+
+	}
+
 	return PBSE_NONE;
 }
-
 /**
  * @brief action function for 'log_events' sched attribute
  *
