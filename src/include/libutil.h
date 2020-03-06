@@ -320,6 +320,12 @@ extern char *netaddr(struct sockaddr_in *);
 extern unsigned long crc_file(char *fname);
 extern int get_fullhostname(char *, char *, int);
 
+int
+send_int(int sock, int num);
+
+int
+recv_int(int sock, int *num);
+
 #ifdef  __cplusplus
 }
 #endif

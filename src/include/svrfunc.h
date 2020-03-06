@@ -55,7 +55,7 @@ extern "C" {
 extern int check_num_cpus(void);
 extern int chk_hold_priv(long, int);
 extern void close_client(int);
-extern int contact_sched(int, char *, pbs_net_t, unsigned int);
+extern int contact_sched(int, char *jobid, pbs_sched *psched, enum towhich_conn which_conn);
 extern void count_node_cpus(void);
 extern int ctcpus(char *, int *);
 extern void get_jobowner(char *, char *);
@@ -131,6 +131,8 @@ extern int direct_write_requested(job *);
 extern void spool_filename(job *, char *, char *);
 extern enum failover_state are_we_primary(void);
 extern void license_more_nodes(void);
+void connect_to_scheduler(pbs_sched *psched);
+void set_sched_state(pbs_sched *psched, char *state);
 extern void reset_svr_sequence_window(void);
 extern void reply_preempt_jobs_request(int, int, struct job *);
 extern int copy_params_from_job(char *, resc_resv *);
