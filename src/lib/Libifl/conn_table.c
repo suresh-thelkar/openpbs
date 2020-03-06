@@ -662,3 +662,4 @@ get_conn_shards(int vfd)
 	UNLOCK_TABLE(NULL);
 	return shards;
 }
+
