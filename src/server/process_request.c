@@ -109,6 +109,7 @@
 #include "svrfunc.h"
 #include "pbs_sched.h"
 #include "auth.h"
+#include "libutil.h"
 
 /* global data items */
 
@@ -276,6 +277,14 @@ process_request(int sfds)
 		CLOSESOCKET(sfds);
 		return;
 	}
+
+#ifndef PBS_MOM
+	if (conn->is_sched_conn) {
+		if (recv_cycle_end(sfds) == -1)
+			close_conn(sfds);
+		return;
+	}
+#endif
 
 	if ((request = alloc_br(0)) == NULL) {
 		log_event(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR, __func__, "Unable to allocate request structure");

@@ -338,7 +338,7 @@ req_runjob(struct batch_request *preq)
 	}
 
 #ifndef NAS /* localmod 133 */
-	if ((psched->scheduler_sock != -1) && was_job_alteredmoved(parent)) {
+	if ((psched->sched_cycle_started != -1) && was_job_alteredmoved(parent)) {
 		int index = find_attr(sched_attr_def, ATTR_throughput_mode, SCHED_ATR_LAST);
 		/* do not blacklist altered/moved jobs when throughput_mode is enabled */
 		if ((index == -1) ||

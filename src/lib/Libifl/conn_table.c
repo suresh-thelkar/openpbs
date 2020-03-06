@@ -662,3 +662,74 @@ get_conn_shards(int vfd)
 	UNLOCK_TABLE(NULL);
 	return shards;
 }
+
+/**
+ * @brief
+ * 	set_conn_shards_exist - sets ch_shrards_exist flag which indicates
+ *	that ch_shards table exists.
+ *
+ * @param[in] vfd - Virtual socket number
+ *
+ * @return int
+ * @retval 0 - success
+ * @retval -1 - error
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: Yes
+ */
+int
+set_conn_shards_exist(int vfd)
+{
+	pbs_conn_t *p = NULL;
+
+	if (INVALID_SOCK(vfd))
+		return -1;
+
+	LOCK_TABLE(-1);
+	p = get_connection(vfd);
+	if (p == NULL) {
+		UNLOCK_TABLE(-1);
+		return -1;
+	}
+	p->ch_shards_exist = 1;
+	UNLOCK_TABLE(-1);
+	return 0;
+}
+
+/**
+ * @brief
+ * 	get_conn_shards_exist - Fetches ch_shards_exist through which we know
+ *      whether ch_shards is already created or not.
+ *
+ * @param[in] vfd - Virtual socket number
+ *
+ * @return int
+ * @retval  0 - success 
+ *                      
+ * @retval  -1 - error
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: Yes
+ */
+int
+get_conn_shards_exist(int vfd)
+{
+	pbs_conn_t *p = NULL;
+
+	if (INVALID_SOCK(vfd))
+		return -1;
+
+	LOCK_TABLE(-1);
+	p = get_connection(vfd);
+	if (p == NULL) {
+		UNLOCK_TABLE(-1);
+		return -1;
+	}
+	UNLOCK_TABLE(-1);
+
+	return p->ch_shards_exist;
+}
