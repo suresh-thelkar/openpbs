@@ -772,6 +772,7 @@ add_conn_priority(int sd, enum conn_type type, pbs_net_t addr, unsigned int port
 	conn->cn_authen = 0;
 	conn->cn_prio_flag = 0;
 	conn->cn_auth_config = NULL;
+	conn->is_sched_conn = 0;
 
 	num_connections++;
 
@@ -1014,7 +1015,8 @@ net_close(int but)
 		int sock = cp->cn_sock;
 		cp = GET_NEXT(cp->cn_link);
 		if(sock != but) {
-			svr_conn[sock]->cn_oncl = NULL;
+			if (svr_conn[sock]->cn_oncl != NULL)
+				svr_conn[sock]->cn_oncl = NULL;
 			close_conn(sock);
 			destroy_connection(sock);
 		}
