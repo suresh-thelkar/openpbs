@@ -68,6 +68,8 @@
 #include "pbs_sched.h"
 #include "queue.h"
 #include "pbs_share.h"
+#include "pbs_sched.h"
+#include <netinet/tcp.h>
 
 
 /* Global Data */
@@ -109,7 +111,6 @@ static struct   am_jobs {
 /* Functions private to this file */
 static void scheduler_close(int);
 
-#define SCHEDULER_ALARM_TIME 20
 /**
  * @brief
  * 		catchalrm	-	put a timeout alarm in case of timeout occurs when contacting the scheduler.
@@ -129,7 +130,8 @@ catchalrm(int sig)
  *
  * @param[in]	sock	-	communication endpoint
  * @param[in]	cmd	-	the command to send
- * @param[in]	jobid	-	the jobid to send if 'cmd' is SCH_SCHEDULE_AJOB
+ * @param[in]	identifier -	the jobid to send if 'cmd' is SCH_SCHEDULE_AJOB
+ * 			   -	the index of the server if 'cmd' is SCH_SVR_IDENTIFIER
  *
  * @return	int
  * @retval	0	for success
@@ -137,7 +139,7 @@ catchalrm(int sig)
  */
 
 int
-put_sched_cmd(int sock, int cmd, char *jobid)
+put_sched_cmd(int sock, int cmd, char *identifier)
 {
 	int   ret;
 
@@ -145,8 +147,8 @@ put_sched_cmd(int sock, int cmd, char *jobid)
 	if ((ret = diswsi(sock, cmd)) != DIS_SUCCESS)
 		goto err;
 
-	if (cmd == SCH_SCHEDULE_AJOB) {
-		if ((ret = (diswst(sock, jobid))) != DIS_SUCCESS)
+	if (cmd == SCH_SCHEDULE_AJOB || cmd == SCH_SVR_IDENTIFIER) {
+		if ((ret = (diswst(sock, identifier))) != DIS_SUCCESS)
 			goto err;
 	}
 
@@ -267,66 +269,96 @@ find_sched_from_sock(int sock)
  */
 
 int
-contact_sched(int cmd, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int pbs_scheduler_port)
+contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_conn)
 {
-	int sock;
+	int sock = -1;
 	conn_t *conn;
-	struct sigaction act, oact;
+	char myindex_str[SVR_MAX_INDEX] = {'\0'};
+#ifdef TCP_USER_TIMEOUT
+	int tcp_timeout = TCP_TIMEOUT;
+#endif
 
 	if ((cmd == SCH_SCHEDULE_AJOB) && (jobid == NULL))
 		return -1;	/* need a jobid */
 
-	/* connect to the Scheduler */
-	/* put a timeout alarm around the connect */
+	if (((which_conn == PRIMARY )&& (psched->scheduler_sock == -1) )||
+			((which_conn == SECONDARY) && (psched->scheduler_sock2 == -1))) {
+		/* Under win32, this function does a timeout wait on the non-blocking socket */
+		sock = client_to_svr(psched->pbs_scheduler_addr, psched->pbs_scheduler_port, 1); /* scheduler connection still uses resv-ports */
+		if (pbs_errno == PBSE_NOLOOPBACKIF)
+			log_err(PBSE_NOLOOPBACKIF, "client_to_svr" , msg_noloopbackif);
 
-	sigemptyset(&act.sa_mask);
-	act.sa_flags = 0;
-	act.sa_handler = catchalrm;
-	if (sigaction(SIGALRM, &act, &oact) == -1)
-		return (PBS_NET_RC_RETRY);
-	alarm(SCHEDULER_ALARM_TIME);
+		if (sock < 0) {
+			log_err(errno, __func__, msg_sched_nocall);
+			return (-1);
+		}
 
-	/* This function does a timeout wait on the non-blocking socket */
-	sock = client_to_svr(pbs_scheduler_addr, pbs_scheduler_port, B_RESERVED); /* scheduler connection still uses resv-ports */
-	if (pbs_errno == PBSE_NOLOOPBACKIF)
-		log_err(PBSE_NOLOOPBACKIF, "client_to_svr" , msg_noloopbackif);
+#ifdef TCP_USER_TIMEOUT
+		setsockopt(sock, IPPROTO_TCP, TCP_USER_TIMEOUT, (char*) &tcp_timeout, sizeof (tcp_timeout));
+#endif
 
-	alarm(0);
 
-	(void)sigaction(SIGALRM, &oact, NULL);	/* reset handler for SIGALRM */
-	if (sock < 0) {
-		log_err(errno, __func__, msg_sched_nocall);
-		return (-1);
-	}
-	conn = add_conn_priority(sock, FromClientDIS, pbs_scheduler_addr,
-		pbs_scheduler_port, NULL, process_request, PRIORITY_CONNECTION);
-	if (!conn) {
-		log_err(errno, __func__, "could not find sock in connection table");
-		return (-1);
-	}
-	conn->cn_authen |= PBS_NET_CONN_TO_SCHED | PBS_NET_CONN_FROM_PRIVIL | PBS_NET_CONN_AUTHENTICATED;
-	strcpy(conn->cn_username, PBS_SCHED_DAEMON_NAME);
-	conn->cn_credid = strdup(PBS_SCHED_DAEMON_NAME);
-	if (conn->cn_credid == NULL) {
-		log_err(errno, __func__, "Out of memory!");
-		return (-1);
-	}
+		conn = add_conn_priority(sock, FromClientDIS, psched->pbs_scheduler_addr,
+		psched->pbs_scheduler_port, NULL, process_request, PRIORITY_CONNECTION);
+
+		if (!conn) {
+			log_err(errno, __func__, "could not find sock in connection table");
+			return (-1);
+		}
+		conn->cn_authen |= PBS_NET_CONN_TO_SCHED | PBS_NET_CONN_FROM_PRIVIL | PBS_NET_CONN_AUTHENTICATED;
+
+		if (which_conn == SECONDARY)
+			conn->is_sched_conn = 1;
+
+		strcpy(conn->cn_username, PBS_SCHED_DAEMON_NAME);
+		conn->cn_credid = strdup(PBS_SCHED_DAEMON_NAME);
+		if (conn->cn_credid == NULL) {
+			log_err(errno, __func__, "Out of memory!");
+			return (-1);
+		}
 	conn->cn_auth_config = make_auth_config(AUTH_RESVPORT_NAME, "",
 							pbs_conf.pbs_exec_path,
 							pbs_conf.pbs_home_path,
 							(void *)log_event);
-	if (conn->cn_auth_config == NULL) {
-		log_err(errno, __func__, "Out of memory!");
-		return -1;
-	}
-	DIS_tcp_funcs();
-	transport_chan_set_ctx_status(sock, AUTH_STATUS_CTX_READY, FOR_AUTH);
-	net_add_close_func(sock, scheduler_close);
+		if (conn->cn_auth_config == NULL) {
+			log_err(errno, __func__, "Out of memory!");
+			return -1;
+		}
+		DIS_tcp_funcs();
+		transport_chan_set_ctx_status(sock, AUTH_STATUS_CTX_READY, FOR_AUTH);
+		net_add_close_func(sock, scheduler_close);
 
-	if (set_nodelay(sock) == -1) {
-		snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
-		log_err(-1, __func__, log_buffer);
-		return (-1);
+		if (set_nodelay(sock) == -1) {
+			snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
+			log_err(-1, __func__, log_buffer);
+			return (-1);
+		}
+
+		if (get_max_servers() > 1) {
+			if ((myindex = get_svr_index(&self)) == -1) {
+				log_err(-1, __func__, "Wrong server index");
+				return -1;
+			}
+			snprintf(myindex_str, sizeof(myindex_str), "%d", myindex);
+		}
+
+		if (put_sched_cmd(sock, SCH_SVR_IDENTIFIER, myindex_str) < 0) {
+			close_conn(sock);
+			return (-1);
+		}
+
+		if (which_conn == PRIMARY)
+			psched->scheduler_sock = sock;
+		else
+			psched->scheduler_sock2 = sock;
+		return sock;
+	}
+
+	if (sock == -1) {
+		if ((which_conn == PRIMARY) && (psched->scheduler_sock != -1))
+			sock = psched->scheduler_sock;
+		if ((which_conn == SECONDARY) && (psched->scheduler_sock2 != -1))
+			sock = psched->scheduler_sock2;
 	}
 
 	/* send command to Scheduler */
@@ -335,6 +367,8 @@ contact_sched(int cmd, char *jobid, pbs_net_t pbs_scheduler_addr, unsigned int p
 		close_conn(sock);
 		return (-1);
 	}
+	psched->sched_cycle_started = 1;
+
 	(void)sprintf(log_buffer, msg_sched_called, cmd);
 	log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_SERVER, LOG_INFO,
 		server_name, log_buffer);
@@ -358,23 +392,17 @@ schedule_high(pbs_sched *psched)
 	if (psched == NULL)
 		return -1;
 
-	if (psched->scheduler_sock == -1) {
-		if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
+	if (psched->sched_cycle_started == 0) {
+		if ((s = contact_sched(psched->svr_do_sched_high, NULL, psched, PRIMARY)) < 0) {
+			set_sched_state(psched, SC_DOWN);
 			return (-1);
 		}
-		set_sched_sock(s, psched);
-		if (psched->scheduler_sock2 == -1) {
-			if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) >= 0)
-				psched->scheduler_sock2 = s;
-		}
 		psched->svr_do_sched_high = SCH_SCHEDULE_NULL;
+		set_sched_state(psched, SC_SCHEDULING);
 		return 0;
+	} else {
+		return 1;
 	}
-
-	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
-
-	return 1;
 }
 
 /**
@@ -410,8 +438,7 @@ schedule_jobs(pbs_sched *psched)
 	else
 		cmd = psched->svr_do_schedule;
 
-	if (psched->scheduler_sock == -1) {
-
+	if (psched->sched_cycle_started == 0) {
 		/* are there any qrun requests from manager/operator */
 		/* which haven't been sent,  they take priority      */
 		pdefr = (struct deferred_request *)GET_NEXT(svr_deferred_req);
@@ -436,20 +463,15 @@ schedule_jobs(pbs_sched *psched)
 			pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
 		}
 
-		if ((s = contact_sched(cmd, jid, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) < 0) {
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_DOWN);
+		if ((s = contact_sched(cmd, jid,  psched, PRIMARY)) < 0) {
+			set_sched_state(psched, SC_DOWN);
 			return (-1);
 		}
 		else if (pdefr != NULL)
 			pdefr->dr_sent = 1;   /* mark entry as sent to sched */
-		set_sched_sock(s, psched);
-		if (psched->scheduler_sock2 == -1) {
-			if ((s = contact_sched(SCH_SCHEDULE_NULL, NULL, psched->pbs_scheduler_addr, psched->pbs_scheduler_port)) >= 0)
-				psched->scheduler_sock2 = s;
-		}
 		psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 
-		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_SCHEDULING);
+		set_sched_state(psched, SC_SCHEDULING);
 
 		first_time = 0;
 
@@ -465,10 +487,11 @@ schedule_jobs(pbs_sched *psched)
 			}
 			pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
 		}
+	} else {
+		return 1;
+	}
 
-		return (0);
-	} else
-		return (1);	/* scheduler was busy */
+	return (0);
 
 }
 
@@ -492,7 +515,6 @@ schedule_jobs(pbs_sched *psched)
 static void
 scheduler_close(int sock)
 {
-	struct deferred_request *pdefr;
 	pbs_sched *psched;
 
 	psched = find_sched_from_sock(sock);
@@ -500,45 +522,23 @@ scheduler_close(int sock)
 	if (psched == NULL)
 		return;
 
-	set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], SC_IDLE);
+	psched->sched_cycle_started = 0;
+
 
 	if ((sock != -1) && (sock == psched->scheduler_sock2)) {
 		psched->scheduler_sock2 = -1;
 		return;	/* nothing to check if scheduler_sock2 */
 	}
 
-	set_sched_sock(-1, psched);
+	psched->scheduler_sock = -1;
+	set_sched_state(psched, SC_IDLE);
 
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;
 	scheduler_jobs_stat = 0;
 
-	/**
-	 *	If a deferred (from qrun) had been sent to the Scheduler and is still
-	 *	there, then the Scheduler must have closed the connection without
-	 *	dealing with the job.  Tell qrun it failed if the qrun connection
-	 *	is still there.
-	 *      If any qrun request is pending in the deffered list, set svr_unsent_qrun_req so
-	 * 	they are sent when the Scheduler completes this cycle
-	 */
-	pdefr = (struct deferred_request *)GET_NEXT(svr_deferred_req);
-	while (pdefr) {
-		struct deferred_request *next_pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
-		if (pdefr->dr_sent != 0) {
-			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB,
-				LOG_NOTICE, pdefr->dr_id,
-				"deferred qrun request to scheduler failed");
-			if (pdefr->dr_preq != NULL)
-				req_reject(PBSE_INTERNAL, 0, pdefr->dr_preq);
-			/* unlink and free the deferred request entry */
-			delete_link(&pdefr->dr_link);
-			free(pdefr);
-		}
-		else if((pdefr->dr_sent == 0) && (svr_unsent_qrun_req == 0)) {
-			svr_unsent_qrun_req = 1;
-		}
-		pdefr = next_pdefr;
-	}
+	handle_deferred_cycle_close();
+
 }
 
 /**
@@ -623,3 +623,128 @@ set_scheduler_flag(int flag, pbs_sched *psched)
 	}
 
 }
+
+/**
+ * @brief
+ * 		Connects to the Scheduler requested.
+ *
+ * @param[in]	pjob	-	pointer to scheduler object
+ *
+ * @return	void
+ */
+void
+connect_to_scheduler(pbs_sched *psched)
+{
+	int sock;
+	sock = contact_sched(SCH_SCHEDULE_NULL, NULL, psched, PRIMARY);
+	if (sock != -1) {
+		if (contact_sched(SCH_SCHEDULE_NULL, NULL, psched, SECONDARY) == -1) {
+			close_conn(sock);
+		} else {
+			set_sched_state(psched, SC_IDLE);
+		}
+
+	}
+}
+
+/**
+ * @brief
+ * 		Connects to the Scheduler requested.
+ *
+ * @param[in]	psched	-	pointer to scheduler object
+ * @param[in] state	-	state of the scheduler
+ *
+ * @return	void
+ */
+void
+set_sched_state(pbs_sched *psched, char *state)
+{
+	 set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]),
+			 &sched_attr_def[(int) SCHED_ATR_sched_state], state);
+	 server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODCACHE;
+}
+
+/**
+ * @brief
+ * 		recv_cycle_end - Receives end of cycle notification from the corresponding Scheduler
+ *
+ * @param[in]	sock	-	socket to read
+ *
+ * @return	int
+ * @retval	0	: on success
+ * @retval	-1	: on error
+ */
+int
+recv_cycle_end(int sock)
+{
+	pbs_sched *psched;
+	int rc;
+
+	for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
+		if (psched->scheduler_sock2 == sock) {
+			DIS_tcp_funcs();
+			psched->sched_cycle_started = disrsi(sock, &rc);
+
+			if (rc != 0) {
+				psched->scheduler_sock2 = -1;
+				psched->sched_cycle_started = 0;
+				set_sched_state(psched, SC_DOWN);
+			} else
+				set_sched_state(psched, SC_IDLE);
+
+			/* clear list of jobs which were altered/modified during cycle */
+			am_jobs.am_used = 0;
+			scheduler_jobs_stat = 0;
+			handle_deferred_cycle_close();
+
+			if (rc == DIS_EOF || rc == -1)
+				rc = -1;
+
+			return rc;
+		}
+	}
+
+	return 0;
+}
+
+/**
+ * @brief
+ * 		handle_deferred_cycle_close - Handles deferred requests during scheduling cycle closure
+ *
+ * @return	void
+ */
+void
+handle_deferred_cycle_close()
+{
+	struct deferred_request *pdefr;
+
+	/*
+	 *	If a deferred (from qrun) had been sent to the Scheduler and is still
+	 *	there, then the Scheduler must have closed the connection without
+	 *	dealing with the job.  Tell qrun it failed if the qrun connection
+	 *	is still there.
+	 *      If any qrun request is pending in the deffered list, set svr_unsent_qrun_req so
+	 * 	they are sent when the Scheduler completes this cycle
+	 */
+	pdefr = (struct deferred_request *)GET_NEXT(svr_deferred_req);
+	while (pdefr) {
+		struct deferred_request *next_pdefr = (struct deferred_request *)GET_NEXT(pdefr->dr_link);
+		if (pdefr->dr_sent != 0) {
+			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB,
+				LOG_NOTICE, pdefr->dr_id,
+				"deferred qrun request to scheduler failed");
+			if (pdefr->dr_preq != NULL)
+				req_reject(PBSE_INTERNAL, 0, pdefr->dr_preq);
+			/* unlink and free the deferred request entry */
+			delete_link(&pdefr->dr_link);
+			free(pdefr);
+		}
+		else if((pdefr->dr_sent == 0) && (svr_unsent_qrun_req == 0)) {
+			svr_unsent_qrun_req = 1;
+		}
+		pdefr = next_pdefr;
+	}
+
+}
+
+
