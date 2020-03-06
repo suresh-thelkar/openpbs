@@ -148,6 +148,8 @@ int got_sigpipe;
 
 int	second_connection;
 
+
+
 /* Stuff needed for multi-threading */
 pthread_mutex_t general_lock;
 pthread_mutex_t work_lock;
@@ -181,3 +183,4 @@ char *logfile = NULL;
 char path_log[_POSIX_PATH_MAX];
 int dflt_sched = 0;
 int server_dyn_res_alarm = 0;
+pbs_svr_sock_pair svr_sock_pair;
