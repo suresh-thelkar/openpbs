@@ -155,7 +155,7 @@ tcp_recv(int fd, void *data, int len)
 #endif
 		if (i == 0)
 			return -2;
-q
+
 		if (i < 0) {
 #ifdef WIN32
 			/*
