@@ -1230,8 +1230,8 @@ recv_cycle_end(int sock)
 		if (psched->scheduler_sock2 == sock) {
 			rc = recv_int(sock, &(psched->sched_cycle_started));
 			if (rc == -1) {
-				log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR,
-					__func__, "Not able to receive sched cycle end, errno = %d", errno);
+				/*log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_REQUEST, LOG_ERR,
+					__func__, "Not able to receive sched cycle end, errno = %d", errno);*/
 				psched->scheduler_sock2 = -1;
 				psched->sched_cycle_started = 0;
 				set_sched_state(psched, SC_DOWN);

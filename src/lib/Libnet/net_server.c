@@ -1015,8 +1015,8 @@ net_close(int but)
 		int sock = cp->cn_sock;
 		cp = GET_NEXT(cp->cn_link);
 		if(sock != but) {
-			if (svr_conn[sock]->cn_oncl != 0)
-				svr_conn[sock]->cn_oncl = NULL;
+			/*if (svr_conn[sock]->cn_oncl != 0)*/
+			svr_conn[sock]->cn_oncl = NULL;
 			close_conn(sock);
 			destroy_connection(sock);
 		}

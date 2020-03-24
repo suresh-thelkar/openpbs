@@ -325,9 +325,6 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, enum towhich_conn which_c
 		net_add_close_func(sock, scheduler_close);
 
 		if (set_nodelay(sock) == -1) {
-	#ifdef WIN32
-			errno = WSAGetLastError();
-	#endif
 			snprintf(log_buffer, sizeof(log_buffer), "cannot set nodelay on connection %d (errno=%d)\n", sock, errno);
 			log_err(-1, __func__, log_buffer);
 			return (-1);
@@ -516,7 +513,6 @@ scheduler_close(int sock)
 
 	psched->sched_cycle_started = 0;
 
-	set_sched_state(psched, SC_DOWN);
 
 	if ((sock != -1) && (sock == psched->scheduler_sock2)) {
 		psched->scheduler_sock2 = -1;
@@ -524,6 +520,8 @@ scheduler_close(int sock)
 	}
 
 	psched->scheduler_sock = -1;
+	/*set_sched_state(psched, SC_DOWN);*/
+	set_sched_state(psched, SC_IDLE);
 
 	/* clear list of jobs which were altered/modified during cycle */
 	am_jobs.am_used = 0;

@@ -118,7 +118,6 @@
 
 int server_sock;
 int second_sd = -1;
-int second_connection = -1;
 fd_set master_fdset;
 
 #define		START_CLIENTS	2	/* minimum number of clients */

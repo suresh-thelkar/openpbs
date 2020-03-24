@@ -1100,8 +1100,8 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 					}
 					if (jid != NULL)
 						free(jid);
-				} else if (ret != 0)
-					return -2;
+				} /*else if (ret != 0)
+					return -2;*/
 
 			}
 		}

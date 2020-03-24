@@ -123,7 +123,6 @@ typedef struct perf_stat {
 static int		perf_stats_initialized = 0;
 static pbs_list_head	perf_stats;
 
-
 /**
  * @brief
  * 	char_in_set - is the char c in the tokenset
