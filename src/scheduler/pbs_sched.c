@@ -1321,11 +1321,6 @@ main(int argc, char *argv[])
 	FD_SET(server_sock, &master_fdset);
 	max_sd = server_sock;
 
-	if ((pbs_conf.pbs_use_tcp == 0) && (rpp_fd != -1)) {
-		FD_SET(rpp_fd, &master_fdset);
-		if (rpp_fd > server_sock)
-			max_sd = rpp_fd;
-	}
 	for (go=1; go;) {
 		int cmd;
 		int sock_to_check;
@@ -1345,11 +1340,6 @@ main(int argc, char *argv[])
 		if (sigusr1_flag)
 			undolr();
 #endif
-		if (pbs_conf.pbs_use_tcp == 0 && rpp_fd != -1 && FD_ISSET(rpp_fd, &read_fdset)) {
-			if (rpp_io() == -1)
-			log_err(errno, __func__, "rpp_io");
-		}
-
 
 		if (FD_ISSET(server_sock, &read_fdset)) {
 			if (accept_client(&max_sd) != 0)
