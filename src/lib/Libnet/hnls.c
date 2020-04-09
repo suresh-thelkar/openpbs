@@ -57,6 +57,7 @@
 #include <ifaddrs.h>
 #include <netdb.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 #include <inttypes.h>
 
 #elif defined(WIN32)
