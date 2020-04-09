@@ -47,6 +47,9 @@
 #include "log.h"
 #include "pbs_ifl.h"
 #include "pbs_internal.h"
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <inttypes.h>
 
 #if defined(linux)
 
@@ -56,9 +59,6 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <netdb.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <inttypes.h>
 
 #elif defined(WIN32)
 
