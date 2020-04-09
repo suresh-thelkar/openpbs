@@ -49,7 +49,7 @@ extern "C" {
 typedef struct pbs_svr_sock_pair {
 	int ch_socket;
 	int ch_secondary_socket;
-}pbs_svr_sock_pair;
+} pbs_svr_sock_pair;
 
 /* resources to check */
 extern const struct rescheck res_to_check[];

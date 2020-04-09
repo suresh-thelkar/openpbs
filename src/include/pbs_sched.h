@@ -124,9 +124,13 @@ typedef struct pbs_sched {
 } pbs_sched;
 
 
+/* This is used when connecting to the Scheduler to let Server know on which
+ * connection(either primary or secondary) it has to talk to.
+ */
 enum towhich_conn {
 	PRIMARY,
-	SECONDARY,};
+	SECONDARY,
+};
 
 extern pbs_sched *dflt_scheduler;
 extern	pbs_list_head	svr_allscheds;
@@ -139,8 +143,6 @@ extern int validate_job_formula(attribute *pattr, void *pobject, int actmode);
 extern pbs_sched *find_sched_from_partition(char *partition);
 extern int get_sched_cmd(int sock, int *val, char **identifier);
 extern int recv_cycle_end(int sock);
-extern void initialise_svr_sock_pair();
-extern void socket_to_conn(int sock);
 extern void handle_deferred_cycle_close();
 
 #ifdef	__cplusplus

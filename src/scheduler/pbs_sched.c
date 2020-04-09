@@ -150,6 +150,8 @@ extern int do_hard_cycle_interrupt;
 
 static int	engage_authentication(int);
 static int	send_cycle_end(int socket);
+static void	initialise_svr_sock_pair();
+static void	socket_to_conn(int sock);
 
 extern char *msg_startup1;
 
@@ -642,7 +644,7 @@ engage_authentication(int sock)
 {
 	int	ret;
 
-	if (sock <0) {
+	if (sock < 0) {
 		cs_logerr(0, "engage_authentication", "Bad arguments, unable to authenticate.");
 		return (-1);
 	}
@@ -801,7 +803,6 @@ main(int argc, char *argv[])
 	time_t		now;
 #endif /* localmod 031 */
 	int		stalone = 0;
-	int		schedinit();
 #ifdef _POSIX_MEMLOCK
 	int		do_mlockall = 0;
 #endif	/* _POSIX_MEMLOCK */
@@ -1433,7 +1434,7 @@ main(int argc, char *argv[])
  * @return	void
  *
  */
-void
+static void
 initialise_svr_sock_pair()
 {
 	svr_sock_pair.ch_socket= -1;
@@ -1447,7 +1448,7 @@ initialise_svr_sock_pair()
  * @return	void
  *
  */
-void
+static void
 socket_to_conn(int sock)
 {
 	if (svr_sock_pair.ch_socket != -1) {

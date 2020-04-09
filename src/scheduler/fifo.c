@@ -1087,17 +1087,13 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 		if (!end_cycle) {
 			if (second_connection != -1) {
 				char *jid = NULL;
-				int ret;
 
-				ret = get_sched_cmd_noblk(second_connection, &cmd, &jid);
+				if ((get_sched_cmd_noblk(second_connection, &cmd, &jid) == 1) &&
+						(cmd == SCH_SCHEDULE_RESTART_CYCLE)) {
+					log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING, njob->name,
+						"Leaving scheduling cycle as requested by server.");
+					end_cycle = 1;
 
-				if (ret == 1){
-					/* get_sched_cmd_noblk() located in file get_4byte.c */
-					if (cmd == SCH_SCHEDULE_RESTART_CYCLE) {
-						log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING, njob->name,
-							"Leaving scheduling cycle as requested by server.");
-						end_cycle = 1;
-					}
 					if (jid != NULL)
 						free(jid);
 				}

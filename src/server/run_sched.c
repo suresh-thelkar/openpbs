@@ -112,7 +112,6 @@ static struct   am_jobs {
 /* Functions private to this file */
 static void scheduler_close(int);
 
-#define SCHEDULER_ALARM_TIME 30
 /**
  * @brief
  * 		catchalrm	-	put a timeout alarm in case of timeout occurs when contacting the scheduler.
