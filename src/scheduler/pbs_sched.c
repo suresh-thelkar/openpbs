@@ -300,7 +300,8 @@ close_server_conns()
 {
 
 	FD_CLR(svr_sock_pair.ch_socket, &master_fdset);
-	server_disconnect(svr_sock_pair.ch_socket);
+	/*server_disconnect(svr_sock_pair.ch_socket);*/
+	pbs_disconnect(svr_sock_pair.ch_socket);
 	close(svr_sock_pair.ch_secondary_socket);
 	svr_sock_pair.ch_socket = -1;
 	svr_sock_pair.ch_secondary_socket = -1;
@@ -1415,7 +1416,8 @@ main(int argc, char *argv[])
 	if (svr_sock_pair.ch_secondary_socket != -1) {
 		close(svr_sock_pair.ch_secondary_socket);
 	}
-	server_disconnect(svr_sock_pair.ch_socket);
+	/*server_disconnect(svr_sock_pair.ch_socket);*/
+	close_server_conns();
 	schedexit();
 
 	sprintf(log_buffer, "%s normal finish pid %ld", argv[0], (long)pid);
