@@ -2430,6 +2430,7 @@ next_job(status *policy, server_info *sinfo, int flag)
  *	scheduler global variables which hold its priv_dir, log_dir and partitions
  *
  * @param[in] status - populated batch_status after stating this scheduler from server
+ * @param[in] sd - socket descriptor to the corresponding pbs server
  *
  * @retval
  * @return 0 - Failure
@@ -2442,7 +2443,7 @@ next_job(status *policy, server_info *sinfo, int flag)
  *
  */
 static int
-sched_settings_frm_svr(struct batch_status *status)
+sched_settings_frm_svr(struct batch_status *status, int sd)
 {
 	struct attrl *attr;
 	char *tmp_priv_dir = NULL;
@@ -2528,8 +2529,7 @@ sched_settings_frm_svr(struct batch_status *status)
 				patt->value = "0";
 				patt->next = NULL;
 
-				err = pbs_manager(svr_sock_pair.ch_socket,
-					MGR_CMD_SET, MGR_OBJ_SCHED,
+				err = pbs_manager(sd, MGR_CMD_SET, MGR_OBJ_SCHED,
 					sc_name, attribs, NULL);
 				free(attribs);
 				if (err) {
@@ -2612,8 +2612,7 @@ sched_settings_frm_svr(struct batch_status *status)
 			patt->name = ATTR_scheduling;
 			patt->value = "0";
 			patt->next = NULL;
-			err = pbs_manager(svr_sock_pair.ch_socket,
-				MGR_CMD_SET, MGR_OBJ_SCHED,
+			err = pbs_manager(sd, MGR_CMD_SET, MGR_OBJ_SCHED,
 				sc_name, attribs, NULL);
 			free(attribs);
 			if (err) {
@@ -2644,8 +2643,7 @@ sched_settings_frm_svr(struct batch_status *status)
 		}
 		patt->value[0] = '\0';
 		patt->next = NULL;
-		err = pbs_manager(svr_sock_pair.ch_socket,
-				MGR_CMD_UNSET, MGR_OBJ_SCHED,
+		err = pbs_manager(sd, MGR_CMD_UNSET, MGR_OBJ_SCHED,
 			sc_name, attribs, NULL);
 		free(attribs->value);
 		free(attribs);
@@ -2772,7 +2770,7 @@ validate_sched_attrs(int connector)
 		pbs_statfree(all_ss);
 		return 0;
 	}
-	if (!sched_settings_frm_svr(ss)) {
+	if (!sched_settings_frm_svr(ss, connector)) {
 		pbs_statfree(all_ss);
 		return 0;
 	}
