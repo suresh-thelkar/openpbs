@@ -93,7 +93,6 @@ int scheduler_jobs_stat = 0;	/* set to 1 once scheduler queried jobs in a cycle*
 extern int svr_unsent_qrun_req;
 #define PRIORITY_CONNECTION 1
 
-
 /**
  * @brief
  * 		am_jobs - array of pointers to jobs which were moved or which had certain

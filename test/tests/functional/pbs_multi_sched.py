@@ -2033,8 +2033,8 @@ e.accept()
             self.server.expect(RESV, attr, rid)
             partition = self.server.status(RESV, 'partition', id=rid)
             if (partition[0]['partition'] == 'P1'):
-                old_end_time = a['reserve_end']
-                modify_resv = rid
+                    old_end_time = a['reserve_end']
+                    modify_resv = rid
         # Modify the endtime of reservation confirmed on partition P1 and
         # make sure the node solution is correct.
         end_time = old_end_time + 60
