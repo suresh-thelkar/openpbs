@@ -47,9 +47,6 @@
 #include "log.h"
 #include "pbs_ifl.h"
 #include "pbs_internal.h"
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <inttypes.h>
 
 #if defined(linux)
 
@@ -718,82 +715,4 @@ get_all_ips(char *hostname, char *msg_buf, size_t msg_buf_len)
 #endif 
 
 	return nodenames;
-}
-
-/**
- * @brief
- *  send_int - Sends an integer over the socket given
- *
- *  @param[in] sock	-socket descriptor
- *  @parma[in/out] num	-pointer to the value of the integer received from the socket
- *
- *  @return	int
- *  @retval	-1 	if fail/error
- *  @retval	0	if success
- */
-int
-send_int(int sock, int num)
-{
-        int32_t conv = htonl(num);
-        char *data = (char*)&conv;
-        int left = sizeof(conv);
-        int rc;
-        do {
-                rc = write(sock, data, left);
-                if (rc < 0) {
-                    if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                        continue;
-                    }
-                    else if (errno != EINTR) {
-                        return -1;
-                    }
-                }
-                else {
-                    data += rc;
-                    left -= rc;
-                }
-        } while (left > 0);
-
-        return 0;
-}
-
-/**
- * @brief
- *  recv_int - Receives an integer over the socket given
- *
- *  @param[in] sock	-socket descriptor
- *  @parma[in/out] num	-pointer to the value of the integer received from the socket
- *
- *  @return	int
- *  @retval	-1 	if fail/error
- *  @retval	0	if success
- */
-int
-recv_int(int sock, int *num)
-{
-        int32_t ret;
-        char *data = (char*)&ret;
-        int left = sizeof(ret);
-        int rc;
-        do {
-                rc = read(sock, data, left);
-                if (rc == 0)
-                        return -1;
-                if (rc < 0) {
-                    if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
-                            continue;
-                    }
-                    else if (errno != EINTR) {
-                        return -1;
-                    }
-                }
-                else {
-                    data += rc;
-                    left -= rc;
-                }
-        } while (left > 0);
-
-        *num = ntohl(ret);
-
-        return 0;
 }

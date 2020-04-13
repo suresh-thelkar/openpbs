@@ -671,8 +671,10 @@ recv_cycle_end(int sock)
 
 	for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
 		if (psched->scheduler_sock2 == sock) {
-			rc = recv_int(sock, &(psched->sched_cycle_started));
-			if (rc == -1) {
+			DIS_tcp_funcs();
+			psched->sched_cycle_started = disrsi(sock, &rc);
+
+			if (rc != 0) {
 				psched->scheduler_sock2 = -1;
 				psched->sched_cycle_started = 0;
 				set_sched_state(psched, SC_DOWN);
@@ -683,6 +685,9 @@ recv_cycle_end(int sock)
 			am_jobs.am_used = 0;
 			scheduler_jobs_stat = 0;
 			handle_deferred_cycle_close();
+
+			if (rc == DIS_EOF || rc == -1)
+				rc = -1;
 
 			return rc;
 		}

@@ -212,8 +212,6 @@ void connection_idlecheck(void);
 void connection_init(void);
 char *build_addr_string(pbs_net_t);
 int set_nodelay(int fd);
-int send_int(int sock, int num);
-int recv_int(int sock, int *num);
 
 struct connection {
 	int		cn_sock;	/* socket descriptor */

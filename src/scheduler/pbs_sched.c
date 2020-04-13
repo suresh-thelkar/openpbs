@@ -1478,10 +1478,17 @@ socket_to_conn(int sock)
 static int
 send_cycle_end(int socket)
 {
-	int rc;
-	rc = send_int(second_connection, SCHED_CYCLE_END);
-	if (rc == -1)
+	int   ret;
+
+	DIS_tcp_funcs();
+
+	if ((ret = diswsi(socket, SCHED_CYCLE_END)) != DIS_SUCCESS) {
 		log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
-			"Not able to send end of cycle, errno = %d", errno);
-	return rc;
+				"Not able to send end of cycle, errno = %d", errno);
+		return -1;
+	}
+
+	(void)dis_flush(socket);
+	return 0;
+
 }
