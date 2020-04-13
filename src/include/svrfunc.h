@@ -132,7 +132,7 @@ extern void spool_filename(job *, char *, char *);
 extern enum failover_state are_we_primary(void);
 extern void license_more_nodes(void);
 extern void connect_to_scheduler(pbs_sched *);
-void set_sched_state(pbs_sched *psched, char *state);
+void set_sched_state(pbs_sched *, char *);
 extern void reset_svr_sequence_window(void);
 extern void reply_preempt_jobs_request(int, int, struct job *);
 extern int copy_params_from_job(char *, resc_resv *);

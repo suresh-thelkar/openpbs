@@ -81,8 +81,6 @@
 #include <pwd.h>
 #include <assert.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
-#include <inttypes.h>
 #ifndef WIN32
 #include <dlfcn.h>
 #include <grp.h>
