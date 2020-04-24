@@ -856,7 +856,7 @@ main(int argc, char *argv[])
 	int update_svr = 1;
 	int num_cfg_svrs;
 	int max_svrs;
-	shard_conn_t ** shard_conn;
+	shard_conn_t **shard_conn = NULL;
 
 	/*the real deal or show version and exit?*/
 
@@ -1506,7 +1506,7 @@ main(int argc, char *argv[])
 		int i;
 
 		if (shard_conn != NULL) {
-			for (i = 0; (i < num_cfg_svrs) && shard_conn[i]; i++) {
+			for (i = 0; (i < num_cfg_svrs); i++) {
 				close_server_conns(i);
 			}
 
