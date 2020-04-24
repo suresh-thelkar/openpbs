@@ -1391,8 +1391,8 @@ main(int argc, char *argv[])
 				second_connection = -1;
 			}
 
-			if (server_disconnect(connector))
-				connector = -1;
+			pbs_disconnect(connector);
+			connector = -1;
 
 			if (runjobid != NULL) {
 				free(runjobid);
