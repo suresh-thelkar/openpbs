@@ -194,8 +194,7 @@ check_and_provision_job(struct batch_request *preq, job *pjob, int *need_prov)
 
 		/* put system hold and move to held state */
 		pjob->ji_wattr[(int)JOB_ATR_hold].at_val.at_long |= HOLD_s;
-		pjob->ji_wattr[(int)JOB_ATR_hold].at_flags |=
-			ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+		pjob->ji_wattr[(int)JOB_ATR_hold].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 		(void)svr_setjobstate(pjob, JOB_STATE_HELD, JOB_SUBSTATE_HELD);
 		job_attr_def[(int)JOB_ATR_Comment].at_decode(
 			&pjob->ji_wattr[(int)JOB_ATR_Comment],
@@ -535,12 +534,12 @@ req_runjob(struct batch_request *preq)
 
 		if (sub_run_version.at_flags & ATR_VFLAG_SET) {
 			pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_val.at_long = sub_run_version.at_val.at_long;
-			pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODCACHE | ATR_VFLAG_MODIFY);
+			pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 		}
 
 		if (sub_runcount.at_flags & ATR_VFLAG_SET) {
 			pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_val.at_long = sub_runcount.at_val.at_long;
-			pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODCACHE | ATR_VFLAG_MODIFY);
+			pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 		}
 
 		if (sub_prev_res.at_flags & ATR_VFLAG_SET) {
@@ -606,12 +605,12 @@ req_runjob(struct batch_request *preq)
 
 				if (sub_run_version.at_flags & ATR_VFLAG_SET) {
 					pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_val.at_long = sub_run_version.at_val.at_long;
-					pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODCACHE | ATR_VFLAG_MODIFY);
+					pjobsub->ji_wattr[(int)JOB_ATR_run_version].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 				}
 
 				if (sub_runcount.at_flags & ATR_VFLAG_SET) {
 					pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_val.at_long = sub_runcount.at_val.at_long;
-					pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODCACHE | ATR_VFLAG_MODIFY);
+					pjobsub->ji_wattr[(int)JOB_ATR_runcount].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 				}
 
 				if (call_to_process_hooks(preq, hook_msg, sizeof(hook_msg),
@@ -661,7 +660,7 @@ req_runjob2(struct batch_request *preq, job *pjob)
 	 * not saved to the database so far.
 	 */
 	if (pjob->ji_qs.ji_svrflags & JOB_SVFLG_SubJob) {
-		if (job_save(pjob, SAVEJOB_NEW)) {
+		if (job_save_db(pjob)) {
 			free_nodes(pjob);
 			req_reject(PBSE_SAVE_ERR, 0, preq);
 			return;
@@ -824,7 +823,7 @@ post_stagein(struct work_task *pwt)
 			pwait = &paltjob->ji_wattr[(int)JOB_ATR_exectime];
 			if ((pwait->at_flags & ATR_VFLAG_SET) == 0) {
 				pwait->at_val.at_long = time_now + PBS_STAGEFAIL_WAIT;
-				pwait->at_flags |= ATR_VFLAG_SET|ATR_VFLAG_MODCACHE;
+				pwait->at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 				(void)job_set_wait(pwait, paltjob, 0);
 			}
 			(void)svr_setjobstate(paltjob, JOB_STATE_WAITING,
@@ -1010,8 +1009,7 @@ svr_startjob(job *pjob, struct batch_request *preq)
 	if (pque->qu_attr[(int)QE_ATR_KillDelay].at_flags & ATR_VFLAG_SET)
 		delay = pque->qu_attr[(int)QE_ATR_KillDelay].at_val.at_long;
 	pjob->ji_wattr[(int)JOB_ATR_job_kill_delay].at_val.at_long = delay;
-	pjob->ji_wattr[(int)JOB_ATR_job_kill_delay].at_flags |=
-		(ATR_VFLAG_SET | ATR_VFLAG_MODCACHE);
+	pjob->ji_wattr[(int)JOB_ATR_job_kill_delay].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 
 #if defined(PBS_SECURITY) && (PBS_SECURITY == KRB5)
 	if (pjob->ji_wattr[(int)JOB_ATR_cred_id].at_flags & ATR_VFLAG_SET) {
@@ -1050,7 +1048,6 @@ svr_startjob(job *pjob, struct batch_request *preq)
 					&pjob->ji_wattr[(int)JOB_ATR_exec_vnode]);
 				job_attr_def[(int)JOB_ATR_pset].at_free(
 					&pjob->ji_wattr[(int)JOB_ATR_pset]);
-				pjob->ji_modified = 1;
 			}
 		}
 
@@ -1090,11 +1087,9 @@ svr_strtjob2(job *pjob, struct batch_request *preq)
 
 	if ((pjob->ji_qs.ji_svrflags & JOB_SVFLG_CHKPT) == 0) {
 		++pjob->ji_wattr[(int)JOB_ATR_run_version].at_val.at_long;
-		pjob->ji_wattr[(int)JOB_ATR_run_version].at_flags |=
-			(ATR_VFLAG_SET | ATR_VFLAG_MODCACHE);
+		pjob->ji_wattr[(int)JOB_ATR_run_version].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 		++pjob->ji_wattr[(int)JOB_ATR_runcount].at_val.at_long;
-		pjob->ji_wattr[(int)JOB_ATR_runcount].at_flags |=
-			(ATR_VFLAG_SET | ATR_VFLAG_MODCACHE);
+		pjob->ji_wattr[(int)JOB_ATR_runcount].at_flags |= (ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE);
 	}
 
 	/* send the job to MOM */
@@ -1196,8 +1191,7 @@ complete_running(job *jobp)
 			/* Also set the parent job's stime */
 			parent->ji_qs.ji_stime = time_now;
 			parent->ji_wattr[(int)JOB_ATR_stime].at_val.at_long = time_now;
-			parent->ji_wattr[(int)JOB_ATR_stime].at_flags |=
-			ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+			parent->ji_wattr[(int)JOB_ATR_stime].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 
 			account_jobstr(parent);
 			job_attr_def[(int) JOB_ATR_Comment].at_decode(
@@ -1227,8 +1221,7 @@ complete_running(job *jobp)
 
 	jobp->ji_qs.ji_stime = time_now;
 	jobp->ji_wattr[(int)JOB_ATR_stime].at_val.at_long = time_now;
-	jobp->ji_wattr[(int)JOB_ATR_stime].at_flags |=
-		ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+	jobp->ji_wattr[(int)JOB_ATR_stime].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 
 	/* compute an upper bound on job end time if possible */
 	if ((wall = get_wall(jobp)) != -1)
@@ -1332,14 +1325,14 @@ check_failed_attempts(job *jobp)
 #endif /* localmod 083 */
 	) {
 		jobp->ji_wattr[(int)JOB_ATR_hold].at_val.at_long |= HOLD_s;
-		jobp->ji_wattr[(int)JOB_ATR_hold].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+		jobp->ji_wattr[(int)JOB_ATR_hold].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 		job_attr_def[(int)JOB_ATR_Comment].at_decode(&jobp->ji_wattr[(int)JOB_ATR_Comment], NULL, NULL, "job held, too many failed attempts to run");
 
 		if (jobp->ji_parentaj) {
 			char comment_buf[100 + PBS_MAXSVRJOBID];
 			svr_setjobstate(jobp->ji_parentaj, JOB_STATE_HELD, JOB_SUBSTATE_HELD);
 			jobp->ji_parentaj->ji_wattr[(int)JOB_ATR_hold].at_val.at_long |= HOLD_s;
-			jobp->ji_parentaj->ji_wattr[(int)JOB_ATR_hold].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+			jobp->ji_parentaj->ji_wattr[(int)JOB_ATR_hold].at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
 			sprintf(comment_buf, "Job Array Held, too many failed attempts to run subjob %s", jobp->ji_qs.ji_jobid);
 			job_attr_def[(int)JOB_ATR_Comment].at_decode(&jobp->ji_parentaj->ji_wattr[(int)JOB_ATR_Comment], NULL, NULL, comment_buf);
 		}
@@ -1894,7 +1887,6 @@ assign_hosts(job  *pjob, char *given, int set_exec_vnode)
 				NULL,
 				NULL,
 				hoststr2);
-			pjob->ji_modified = 1;
 		} else {
 			/* leave exec_vnode alone and reuse old IP address */
 			momaddr = pjob->ji_qs.ji_un.ji_exect.ji_momaddr;
