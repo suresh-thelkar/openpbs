@@ -454,9 +454,8 @@ initialise_inact_svr_indexes()
 	int i;
 	int num_cfg_svrs = get_current_servers();
 
-	if (!(inact_svr_indexes = malloc(num_cfg_svrs * sizeof(int)))) {
+	if (!(inact_svr_indexes = malloc(num_cfg_svrs * sizeof(int))))
 		return NULL;
-	}
 
 	for (i = 0; i < num_cfg_svrs; i++)
 		inact_svr_indexes[i] = -1;

@@ -49,7 +49,7 @@ extern "C" {
 typedef struct pbs_svr_sock_pair {
 	int ch_socket;
 	int ch_secondary_socket;
-} pbs_svr_sock_pair;
+} pbs_svr_sock_pair_t;
 
 /* resources to check */
 extern const struct rescheck res_to_check[];
@@ -111,7 +111,7 @@ extern int server_dyn_res_alarm;
  * used by sorting routine to compare with vnode's current aoe.
  */
 extern char *cmp_aoename;
-extern pbs_svr_sock_pair svr_sock_pair;
+extern pbs_svr_sock_pair_t svr_sock_pair;
 
 #ifdef	__cplusplus
 }

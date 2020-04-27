@@ -301,9 +301,13 @@ server_disconnect(int connect)
 static void
 close_server_conns(int index_to_shards)
 {
+	/* initialize the thread context data, if not already initialized */
+	pbs_client_thread_init_thread_context();
 
 	if (get_max_servers() > 1) {
 		shard_conn_t **shard_connection = NULL;
+
+		pbs_client_thread_lock_connection(server_sock);
 
 		shard_connection = (shard_conn_t **)get_conn_shards(server_sock);
 
@@ -324,7 +328,12 @@ close_server_conns(int index_to_shards)
 			}
 		}
 
+		/* unlock the connection level lock */
+		pbs_client_thread_unlock_connection(server_sock);
+
 	} else {
+		pbs_client_thread_lock_connection(svr_sock_pair.ch_socket);
+
 		FD_CLR(svr_sock_pair.ch_socket , &master_fdset);
 
 		if (svr_sock_pair.ch_secondary_socket >= 0)
@@ -335,7 +344,19 @@ close_server_conns(int index_to_shards)
 
 		svr_sock_pair.ch_socket = -1;
 		svr_sock_pair.ch_secondary_socket = -1;
+
+		/* unlock the connection level lock */
+		pbs_client_thread_unlock_connection(svr_sock_pair.ch_socket);
 	}
+
+
+
+	/*
+	 * this is only a per thread work, so outside lock and unlock
+	 * connection needs the thread level connect context so this should be
+	 * called after unlocking
+	 */
+	pbs_client_thread_destroy_connect_context(server_sock);
 
 }
 
