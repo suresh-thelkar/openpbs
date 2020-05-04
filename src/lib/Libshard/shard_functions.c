@@ -151,6 +151,10 @@ pbs_shard_get_server_byindex(int obj_type, char *obj_id, int *inactive_servers)
 
 	if (obj_id) {
 		nshardid = strtoull(obj_id, NULL, 10);
+		/* just a hack to test multi server code with single instance and max_servers > 1 */
+		if (configured_num_servers == 1)
+			return 0;
+
 		srv_ind = nshardid % max_num_of_servers;
 	} else {
 		if (!seeded) {
