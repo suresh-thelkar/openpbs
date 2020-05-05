@@ -84,8 +84,6 @@ pg_set_error(pbs_db_conn_t *conn, char *fnc, char *msg, char *msg2)
 	char *str;
 	char *p;
 	char fmt[] = "%s %s failed: %s %s";
-	int msg2_len = 0;
-	int msg_len = 0;
 
 	if (conn->conn_db_err) {
 		free(conn->conn_db_err);
@@ -100,13 +98,7 @@ pg_set_error(pbs_db_conn_t *conn, char *fnc, char *msg, char *msg2)
 	while ((p >= str) && (*p == '\r' || *p == '\n'))
 		*p-- = 0; /* supress the last newline */
 
-	if (msg != NULL)
-		msg2_len = strlen(msg);
-
-	if (msg2 != NULL)
-		msg2_len = strlen(msg2);
-
-	conn->conn_db_err = malloc(strlen(fnc) + msg_len + msg2_len + strlen(str) + sizeof(fmt) + 1);
+	conn->conn_db_err = malloc(strlen(fnc) + strlen(msg) + strlen(msg2) + strlen(str) + sizeof(fmt) + 1);
 	if (!conn->conn_db_err)
 		return;
 
