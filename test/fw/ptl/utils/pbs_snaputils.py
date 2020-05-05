@@ -1181,8 +1181,22 @@ quit()
                                        core_dest)
 
         # Delete the core file itself
-        if os.path.isfile(file_path):
-            os.remove(file_path)
+        # if os.path.isfile(file_path):
+        #     os.remove(file_path)
+        self.__add_to_archive(file_path)
+
+        try:
+            self.du.run_copy(src=exec_name, dest=core_dir,
+                             recursive=False,
+                             preserve_permission=False,
+                             level=logging.DEBUG)
+        except OSError:
+            self.logger.error("Could not copy %s" % exec_name)
+
+        filename = os.path.basename(exec_name)
+        core_dest = os.path.join(core_dir, filename)
+
+        self.__add_to_archive(core_dest)
 
         return True
 
@@ -1315,7 +1329,7 @@ quit()
             self.outtar_fd.add(src_path, arcname=path_in_tar)
 
             # Remove original file
-            os.remove(src_path)
+            # os.remove(src_path)
         except OSError:
             self.logger.error(
                 "File %s could not be added to tarball" % (src_path))
