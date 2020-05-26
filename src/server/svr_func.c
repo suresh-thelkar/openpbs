@@ -55,7 +55,6 @@
  * 	set_reserve_retry_init()
  * 	set_rpp_retry()
  * 	set_rpp_highwater()
- * 	set_sched_sock()
  * 	is_valid_resource()
  * 	deflt_chunk_action()
  * 	set_license_location()
@@ -311,7 +310,7 @@ encode_svrstate(attribute *pattr, pbs_list_head *phead, char *atname, char *rsna
 	if (pattr->at_val.at_long == SV_STATE_RUN) {
 		if (server.sv_attr[(int)SRV_ATR_scheduling].at_val.at_long == 0)
 			psname = svr_idle;
-		else if (dflt_scheduler->scheduler_sock != -1)
+		else if (dflt_scheduler && dflt_scheduler->sched_cycle_started == 1)
 			psname = svr_sched;
 	}
 
@@ -791,23 +790,6 @@ set_rpp_highwater(attribute *pattr, void *pobj, int actmode)
 
 	return PBSE_NONE;
 }
-
-/**
- * @brief
- * 		set_sched_sock - set the internal socket used to communicate with the
- *		scheduler.   Done here because also need to invalidate the server
- *		state attribute cache.
- *
- * @param[in] s		-	internal socket used to communicate with the scheduler
- * @param[in] psched	-	pointer to sched object
- */
-void
-set_sched_sock(int s, pbs_sched *psched)
-{
-	psched->scheduler_sock = s;
-	server.sv_attr[(int)SRV_ATR_State].at_flags |= ATR_VFLAG_MODIFY | ATR_VFLAG_MODCACHE;
-}
-
 
 /**
  * @brief
