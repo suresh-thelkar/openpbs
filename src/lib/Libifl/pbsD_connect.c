@@ -532,6 +532,38 @@ __pbs_connect(char *server)
 
 /**
  * @brief
+ *	-send close connection batch request to multi servers
+ *
+ * @param[in] sock - socket descriptor
+ *
+ */
+void
+close_tcp_connection(int sock)
+{
+	char x;
+
+	/* send close-connection message */
+
+	DIS_tcp_funcs();
+	if ((encode_DIS_ReqHdr(sock, PBS_BATCH_Disconnect, pbs_current_user) == 0) &&
+		(dis_flush(sock) == 0)) {
+		for (;;) {	/* wait for server to close connection */
+#ifdef WIN32
+			if (recv(sock, &x, 1, 0) < 1)
+#else
+			if (read(sock, &x, 1) < 1)
+#endif
+				break;
+		}
+	}
+
+	CS_close_socket(sock);
+	CLOSESOCKET(sock);
+	dis_destroy_chan(sock);
+}
+
+/**
+ * @brief
  *	-send close connection batch request
  *
  * @param[in] connect - socket descriptor
@@ -869,3 +901,44 @@ err:
 
 	return sock;
 }
+
+/**
+ * @brief
+ * 	initialise_server_conns - To intialize the servers connection table.
+ *
+ * @param[in] fd -  socket file descriptor
+ *
+ * @return int
+ * @retval 0 - success
+ * @retval -1 - error
+ */
+int 
+initialise_server_conns(int fd)
+{
+	int i;
+	int j;
+	/* TODO - Should use following once get_current_servers is defined */
+	/* int num_conf_servers = get_current_servers() */;
+	int num_conf_servers = 1;
+	svr_conn_t **svr_conns = calloc(num_conf_servers, sizeof(svr_conn_t *));
+	if (!svr_conns)
+		return -1;
+	for (i = 0; i < num_conf_servers; i++) {
+		svr_conns[i] = malloc(sizeof(svr_conn_t));
+		if (!svr_conns[i]) {
+			for (j = 0; j < i; j++ )
+				free(svr_conns[j]);
+			free(svr_conns);
+			return -1;
+		}
+		svr_conns[i]->sd = -1;
+		svr_conns[i]->secondary_sd = -1;
+		svr_conns[i]->state = SVR_CONN_STATE_DOWN;
+		svr_conns[i]->state_change_time = 0;
+		svr_conns[i]->last_used_time = 0;
+	}
+	if ( set_conn_servers(fd, (void *)svr_conns) )
+		return -1;
+	return 0;
+}
+

@@ -522,3 +522,74 @@ get_conn_mutex(int fd)
 	UNLOCK_TABLE(NULL);
 	return mutex;
 }
+/**
+ * @brief
+ * 	set_conn_servers - set connection ch_servers structure synchronously
+ *
+ * @param[in] fd - socket number
+ * @param[in] ch_servers - tcp chan to set on connection
+ *
+ * @return int
+ * @retval 0 - success
+ * @retval -1 - error
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: Yes
+ */
+int
+set_conn_servers(int fd, void *ch_servers)
+{
+	pbs_conn_t *p = NULL;
+
+	if (INVALID_SOCK(fd))
+		return -1;
+
+	LOCK_TABLE(-1);
+	p = get_connection(fd);
+	if (p == NULL) {
+		errno = ENOTCONN;
+		UNLOCK_TABLE(-1);
+		return -1;
+	}
+	p->ch_svr_conns = ch_servers;
+	UNLOCK_TABLE(-1);
+	return 0;
+}
+
+/**
+ * @brief
+ * 	get_conn_servers - get connection ch_servers synchronously
+ *
+ * @param[in] fd - socket number
+ *
+ * @return svr_conn_t **
+ * @retval !NULL - success
+ * @retval NULL - error
+ *
+ * @par Side Effects:
+ *	None
+ *
+ * @par MT-safe: Yes
+ */
+void *
+get_conn_servers(int fd)
+{
+	pbs_conn_t *p = NULL;
+	void *ch_servers = NULL;
+
+	if (INVALID_SOCK(fd))
+		return NULL;
+
+	LOCK_TABLE(NULL);
+	p = get_connection(fd);
+	if (p == NULL) {
+		errno = ENOTCONN;
+		UNLOCK_TABLE(NULL);
+		return NULL;
+	}
+	ch_servers = p->ch_svr_conns;
+	UNLOCK_TABLE(NULL);
+	return ch_servers;
+}

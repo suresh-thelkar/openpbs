@@ -47,6 +47,7 @@ extern "C" {
 #include "data_types.h"
 #include "limits.h"
 #include "queue.h"
+
 /* resources to check */
 extern const struct rescheck res_to_check[];
 

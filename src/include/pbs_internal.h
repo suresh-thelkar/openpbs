@@ -477,6 +477,8 @@ extern int pbs_connect_noblk(char *, int);
 
 extern int pbs_connection_set_nodelay(int);
 
+extern void close_tcp_connection(int);
+
 extern int pbs_geterrno(void);
 
 extern int pbs_py_spawn(int, char *, char **, char **);
@@ -524,6 +526,7 @@ extern int usepool(int, int);
 
 extern enum vnode_sharing place_sharing_type(char *, enum vnode_sharing);
 
+extern int initialise_server_conns(int);
 /* This was added to pbs_ifl.h for use by AIF */
 extern int 	pbs_isexecutable(char *);
 extern char 	*pbs_ispbsdir(char *, char *);
