@@ -487,6 +487,8 @@ extern int pbs_connect_noblk(char *, int);
 
 extern int pbs_connection_set_nodelay(int);
 
+extern void close_tcp_connection(int);
+
 extern int pbs_geterrno(void);
 
 extern int pbs_py_spawn(int, char *, char **, char **);
