@@ -2172,3 +2172,14 @@ get_max_servers(void)
 {
 	return 1;
 }
+
+/**
+ * @brief
+ *	get_server_index - Getter function to get index of the server
+ *
+ */
+int
+get_server_index()
+{
+	return pbs_conf.pbs_svr_index;
+}

@@ -125,10 +125,11 @@ struct pbs_config pbs_conf = {
 	NULL,					/* mom short name override */
 	NULL,					/* pbs_lr_save_path */
 	0,					/* high resolution timestamp logging */
-	0					/* number of scheduler threads */
+	0,					/* number of scheduler threads */
 #ifdef WIN32
 	,NULL					/* remote viewer launcher executable along with launch options */
 #endif
+	0					/* Index of the Server */
 };
 
 /**
@@ -396,6 +397,12 @@ __pbs_loadconf(int reload)
 				if (sscanf(conf_value, "%u", &uvalue) == 1)
 					pbs_conf.start_comm = ((uvalue > 0) ? 1 : 0);
 			}
+
+			else if (!strcmp(conf_name, PBS_CONF_SERVER_INDEX)) {
+				if (sscanf(conf_value, "%u", &uvalue) == 1)
+					pbs_conf.pbs_svr_index = uvalue;
+			}
+
 			else if (!strcmp(conf_name, PBS_CONF_LOCALLOG)) {
 				if (sscanf(conf_value, "%u", &uvalue) == 1)
 					pbs_conf.locallog = ((uvalue > 0) ? 1 : 0);
@@ -631,6 +638,10 @@ __pbs_loadconf(int reload)
 	if ((gvalue = getenv(PBS_CONF_START_COMM)) != NULL) {
 		if (sscanf(gvalue, "%u", &uvalue) == 1)
 			pbs_conf.start_comm = ((uvalue > 0) ? 1 : 0);
+	}
+	if ((gvalue = getenv(PBS_CONF_SERVER_INDEX)) != NULL) {
+		if (sscanf(gvalue, "%u", &uvalue) == 1)
+			pbs_conf.pbs_svr_index = uvalue;
 	}
 	if ((gvalue = getenv(PBS_CONF_LOCALLOG)) != NULL) {
 		if (sscanf(gvalue, "%u", &uvalue) == 1)

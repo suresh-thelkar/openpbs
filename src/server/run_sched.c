@@ -340,11 +340,10 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, conn_origin_t which_conn)
 			return -1;
 		}
 
-	/*TODO remove this block of code later */
-	/* 	if ((myindex = get_svr_index(&self)) == -1) {
+		if ((my_index = get_server_index()) == -1) {
 			log_err(-1, __func__, "Wrong server index");
 			return -1;
-		} */
+		}
 		snprintf(myindex_str, sizeof(myindex_str), "%d", my_index);
 
 		if (put_sched_cmd(sock, SCH_SVR_IDENTIFIER, myindex_str) < 0) {

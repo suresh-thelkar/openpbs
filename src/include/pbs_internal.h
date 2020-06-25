@@ -250,6 +250,7 @@ struct pbs_config
 #ifdef WIN32
 	char *pbs_conf_remote_viewer; /* Remote viewer client executable for PBS GUI jobs, along with launch options */
 #endif
+	unsigned int pbs_svr_index; /* Index of the Server */
 };
 
 extern struct pbs_config pbs_conf;
@@ -332,6 +333,7 @@ extern struct pbs_config pbs_conf;
 #define PBS_SCHEDULER_SERVICE_PORT	15004
 #define PBS_DATA_SERVICE_NAME           "pbs_dataservice"
 #define PBS_DATA_SERVICE_STORE_NAME     "pbs_datastore"
+#define PBS_CONF_SERVER_INDEX		"PBS_SERVER_INDEX"
 
 /* Values for Job's ATTR_accrue_type */
 enum accrue_types {

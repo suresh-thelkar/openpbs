@@ -341,3 +341,4 @@ void encode_SHA(char*, size_t, char **);
 #endif
 
 int get_max_servers(void);
+int get_server_index();
