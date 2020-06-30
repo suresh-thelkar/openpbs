@@ -795,6 +795,38 @@ __pbs_connect(char *server)
 
 /**
  * @brief
+ *	-send close connection batch request to multi servers
+ *
+ * @param[in] sock - socket descriptor
+ *
+ */
+void
+close_tcp_connection(int sock)
+{
+	char x;
+
+	/* send close-connection message */
+
+	DIS_tcp_funcs();
+	if ((encode_DIS_ReqHdr(sock, PBS_BATCH_Disconnect, pbs_current_user) == 0) &&
+		(dis_flush(sock) == 0)) {
+		for (;;) {	/* wait for server to close connection */
+#ifdef WIN32
+			if (recv(sock, &x, 1, 0) < 1)
+#else
+			if (read(sock, &x, 1) < 1)
+#endif
+				break;
+		}
+	}
+
+	CS_close_socket(sock);
+	CLOSESOCKET(sock);
+	dis_destroy_chan(sock);
+}
+
+/**
+ * @brief
  *	-send close connection batch request
  *
  * @param[in] connect - socket descriptor

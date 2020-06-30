@@ -752,7 +752,7 @@ req_stat_svr(struct batch_request *preq)
 		server.sv_license_ct_buf);
 
 	conn = get_conn(preq->rq_conn);
-	if (conn->cn_authen & PBS_NET_CONN_TO_SCHED) {
+	if (conn->conn_origin == CONN_SCHED_PRIMARY) {
 		/* Request is from sched so update "has_runjob_hook" */
 		update_isrunhook(&server.sv_attr[SRV_ATR_has_runjob_hook]);
 	}
