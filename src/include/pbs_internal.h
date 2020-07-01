@@ -388,6 +388,9 @@ enum accrue_types {
 /* this is the PBS defult jobscript_max_size default value is 100MB*/
 #define DFLT_JOBSCRIPT_MAX_SIZE "100mb"
 
+/* svr_id is of the form sever_name:port. 4 is the lengh of the port, 1 for NULL char */
+#define MAX_SVR_ID (PBS_MAXSERVERNAME + 5)
+
 /* internal attributes */
 #define ATTR_prov_vnode	"prov_vnode"	/* job attribute */
 #define ATTR_ProvisionEnable	"provision_enable"  /* server attribute */

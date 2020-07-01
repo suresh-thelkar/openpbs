@@ -333,7 +333,7 @@ close_server_conn(int index_to_shards)
 			svr_conns[index_to_shards]->sd = -1;
 		}
 		svr_conns[index_to_shards]->state = SVR_CONN_STATE_DOWN;
-		svr_id--;
+		svr_conn_index--;
 		pbs_client_thread_unlock_connection(entry_to_svr_conns);
 	}
 }
@@ -1431,7 +1431,9 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 {
 	svr_conn_t **svr_conns;
 	struct hostent *phe;
-	
+	char *id;
+	int cmd;
+
 	/* Use server_sock as virtual socket to get connection objects for all servers */
 	svr_conns = (svr_conn_t **)get_conn_servers(entry_to_svr_conns);
 	if (svr_conns == NULL)
@@ -1441,16 +1443,21 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		return -1;
 
 
-	strcpy(svr_conns[svr_id]->host_name, phe->h_name);
-	svr_conns[svr_id]->state = SVR_CONN_STATE_CONNECTED;
-	svr_conns[svr_id]->state_change_time = time(0);
+	if (get_sched_cmd(sock, &cmd, &id) != 1)
+		return -1;
 
-	if (svr_conns[svr_id]->sd == -1) {
-		svr_conns[svr_id]->sd = sock;
+	strcpy(svr_conns[svr_conn_index]->host_name, phe->h_name);
+	svr_conns[svr_conn_index]->state = SVR_CONN_STATE_CONNECTED;
+	svr_conns[svr_conn_index]->state_change_time = time(0);
+	strcpy(svr_conns[svr_conn_index]->svr_id, id);
+	free(id);
+
+	if (svr_conns[svr_conn_index]->sd == -1) {
+		svr_conns[svr_conn_index]->sd = sock;
 		FD_SET(sock, &master_fdset);
 	} else {
-		svr_conns[svr_id]->secondary_sd = sock;
-		svr_id++;
+		svr_conns[svr_conn_index]->secondary_sd = sock;
+		svr_conn_index++;
 	}
 
 	return 0;

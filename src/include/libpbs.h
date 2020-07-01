@@ -126,6 +126,7 @@ typedef struct svr_conn {
 	time_t state_change_time;   /* Connnetion state change time */
 	time_t last_used_time;      /* Last used time for the connection */
 	char host_name[256];        /* hostname of the connection coming from */
+	char svr_id[MAX_SVR_ID];    /* svr_id of the form server_name:port */
 } svr_conn_t;
 
 typedef struct pbs_conn {

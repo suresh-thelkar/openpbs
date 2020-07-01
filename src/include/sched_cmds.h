@@ -56,8 +56,8 @@
 #define SCH_SCHEDULE_STARTQ 13		/* Stopped queue started */
 #define SCH_SCHEDULE_MVLOCAL 14		/* Job moved to local queue */
 #define SCH_SCHEDULE_ETE_ON 15		/* eligible_time_enable is turned ON */
-#define SCH_SCHEDULE_RESV_RECONFIRM 16		/* Reconfirm a reservation */
-#define SCH_SCHEDULE_RESTART_CYCLE 17		/* Restart a scheduling cycle */
-
+#define SCH_SCHEDULE_RESV_RECONFIRM 16	/* Reconfirm a reservation */
+#define SCH_SCHEDULE_RESTART_CYCLE 17	/* Restart a scheduling cycle */
+#define SCH_SVR_ID 18			/* Used to send server id */
 
 extern int schedule(int cmd, int sd, char *runjid);

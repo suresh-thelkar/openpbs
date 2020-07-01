@@ -130,7 +130,8 @@ catchalrm(int sig)
  *
  * @param[in]	sock	-	communication endpoint
  * @param[in]	cmd	-	the command to send
- * @param[in]	jobid	-	the jobid to send if 'cmd' is SCH_SCHEDULE_AJOB
+ * @param[in]	identifier -	the jobid to send if 'cmd' is SCH_SCHEDULE_AJOB
+ * 			   -	the index of the server if 'cmd' is SCH_SVR_ID
  *
  * @return	int
  * @retval	0	for success
@@ -138,7 +139,7 @@ catchalrm(int sig)
  */
 
 int
-put_sched_cmd(int sock, int cmd, char *jobid)
+put_sched_cmd(int sock, int cmd, char *identifier)
 {
 	int   ret;
 
@@ -146,8 +147,8 @@ put_sched_cmd(int sock, int cmd, char *jobid)
 	if ((ret = diswsi(sock, cmd)) != DIS_SUCCESS)
 		goto err;
 
-	if (cmd == SCH_SCHEDULE_AJOB) {
-		if ((ret = (diswst(sock, jobid))) != DIS_SUCCESS)
+	if (cmd == SCH_SCHEDULE_AJOB || cmd == SCH_SVR_ID) {
+		if ((ret = (diswst(sock, identifier))) != DIS_SUCCESS)
 			goto err;
 	}
 
@@ -272,6 +273,7 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, conn_origin_t which_conn)
 {
 	int sock = -1;
 	conn_t *conn;
+	char svr_id[MAX_SVR_ID] = {'\0'};
 	/* As we are restricting number of servers to 99 in the worst case(although in reality one can use at the max 5 to 10 servers),
 	 * if we convert these ids to string form, we hardly need a char array of length two + 1 for NULL character.
 	 */
@@ -336,7 +338,12 @@ contact_sched(int cmd, char *jobid, pbs_sched *psched, conn_origin_t which_conn)
 			log_err(-1, __func__, log_buffer);
 			return -1;
 		}
-
+		snprintf(svr_id, sizeof(svr_id), "%s:%d", pbs_conf.pbs_server_name, pbs_conf.batch_service_port);
+		if (put_sched_cmd(sock, SCH_SVR_ID, svr_id) < 0) {
+			close_conn(sock);
+			return (-1);
+		}
+		
 		psched->scheduler_sock[sched_sock_arr_index] = sock;
 		return sock;
 	}
