@@ -108,7 +108,7 @@ extern time_t last_attr_updates;    /* timestamp of the last time attr updates w
 
 extern int send_job_attr_updates;
 
-extern int svr_id;
+extern int svr_conn_index;
 
 /**
  * @brief
