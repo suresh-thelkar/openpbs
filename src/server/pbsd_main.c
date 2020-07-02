@@ -1587,8 +1587,11 @@ try_db_again:
 		(void)set_task(WORK_Timed, time_now, primary_handshake, NULL);
 
 	}
-	dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
-	dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
+	if (dflt_scheduler->pbs_scheduler_addr == 0)
+		dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
+
+	if (dflt_scheduler->pbs_scheduler_port == 0)
+		dflt_scheduler->pbs_scheduler_port = pbs_scheduler_port;
 
 	sprintf(log_buffer, msg_startup2, sid, pbs_server_port_dis,
 		pbs_scheduler_port, pbs_mom_port, pbs_rm_port);
@@ -1628,9 +1631,6 @@ try_db_again:
 	if ((pc=strchr(svr_interp_data.local_host_name, '.')) != NULL)
 		*pc = '\0';
 
-	if (server_init_type != RECOV_CREATE)
-		/* Since we support failover only for default scheduler we connect only to it at this place */
-		connect_to_scheduler(dflt_scheduler);
 
 	if (pbs_python_ext_start_interpreter(&svr_interp_data) != 0) {
 		log_err(-1, msg_daemonname, "Failed to start Python interpreter");
@@ -1703,6 +1703,9 @@ try_db_again:
 				first_run = 0;
 			}
 			for (psched = (pbs_sched*) GET_NEXT(svr_allscheds); psched; psched = (pbs_sched*) GET_NEXT(psched->sc_link)) {
+				if (server_init_type == RECOV_CREATE)
+					break;
+
 				/* if time or event says to run scheduler, do it */
 				if (psched->scheduler_sock[0] == CONN_UNKNOWN &&
 					psched->scheduler_sock[1] == CONN_UNKNOWN) {

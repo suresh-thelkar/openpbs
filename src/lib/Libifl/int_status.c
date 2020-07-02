@@ -129,7 +129,7 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 
 	for (i = 0; i < get_current_servers(); i++) {
 		
-		if (svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
+		if ((svr_connections[i] == NULL) || svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
 			continue;
 
 		c = svr_connections[i]->sd;

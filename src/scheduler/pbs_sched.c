@@ -463,9 +463,25 @@ void
 restart(int sig)
 {
 	if (sig) {
+		int i;
+		int num_conf_svrs;
+
 		log_close(1);
 		pbs_loadconf(1);
 		log_open(logfile, path_log);
+
+		num_conf_svrs = get_current_servers();
+
+		if (num_conf_svrs > MAX_ALLOWED_SVRS) {
+			log_record(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_INFO, __func__,  "Maximum allowed servers exceeded");	
+			die(0);
+		}
+
+		for (i = 0; i < num_conf_svrs; i++) {
+			if (pbs_conf.psi[i]->name != NULL)
+				addclient(pbs_conf.psi[i]->name);
+		}
+		
 		sprintf(log_buffer, "restart on signal %d", sig);
 	} else {
 		sprintf(log_buffer, "restart command");
@@ -1434,6 +1450,12 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 	char *id;
 	int cmd;
 
+	if (svr_conn_index +1  > get_current_servers()) {
+		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
+			"Wrong PBS_SERVER_INSTANCES configuration");
+		return -1;
+	}
+
 	/* Use server_sock as virtual socket to get connection objects for all servers */
 	svr_conns = (svr_conn_t **)get_conn_servers(entry_to_svr_conns);
 	if (svr_conns == NULL)
@@ -1446,6 +1468,15 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 	if (get_sched_cmd(sock, &cmd, &id) != 1)
 		return -1;
 
+	if (svr_conns[svr_conn_index] == NULL) {
+		svr_conns[svr_conn_index] = malloc(sizeof(svr_conn_t));
+		if (svr_conns[svr_conn_index] == NULL)
+			return -1;
+	
+		svr_conns[svr_conn_index]->sd = -1;
+		svr_conns[svr_conn_index]->secondary_sd = -1;
+		svr_conns[svr_conn_index]->state = SVR_CONN_STATE_DOWN;	
+	}
 	strcpy(svr_conns[svr_conn_index]->host_name, phe->h_name);
 	svr_conns[svr_conn_index]->state = SVR_CONN_STATE_CONNECTED;
 	svr_conns[svr_conn_index]->state_change_time = time(0);

@@ -414,7 +414,8 @@ initialize_server_conns(int num_conf_servers)
 {
 	int i;
 	int j;
-	svr_conn_t **svr_connections = calloc(num_conf_servers, sizeof(svr_conn_t *));
+	svr_conn_t **svr_connections = calloc(MAX_ALLOWED_SVRS, sizeof(svr_conn_t *));
+
 	if (!svr_connections)
 		return NULL;
 		
