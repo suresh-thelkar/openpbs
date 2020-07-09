@@ -1306,7 +1306,6 @@ update_job_can_not_run(int pbs_sd, resource_resv *job, schd_error *err)
 static int
 send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char *svr_of_node, char *svr_of_job)
 {
-	int svr_id_len = 0;
 	svr_conn_t **svr_conns = NULL;
 	int i = 0;
 	char *extend = NULL;
@@ -1321,19 +1320,12 @@ send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char
 
 
 		for (i = 0; i < num_conf_svrs; i++) {
-			char *tmp_str;
 			char *colon_ptr;
 
 			if (svr_conns[i] == NULL)
 				continue;
 
-			tmp_str = string_dup(svr_conns[i]->svr_id);
-			if (tmp_str == NULL) {
-				log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "string_dup failure");
-				return -1;
-			}
-
-			colon_ptr = strstr(tmp_str, ":") ;
+			colon_ptr = strstr(svr_conns[i]->svr_id, ":") ;
 			if (colon_ptr == NULL) {
 				log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "malformed svr_id");
 				return -1;
@@ -1341,10 +1333,13 @@ send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char
 
 			*colon_ptr = '\0';
 
-			if (strcmp(tmp_str, svr_of_node) == 0)
+			if (strcmp(svr_conns[i]->svr_id, svr_of_node) == 0) {
+				*colon_ptr = ':';
 				break;
-
-			free(tmp_str);
+			}
+			
+			*colon_ptr = ':';
+			
 		}
 
 		if (i == num_conf_svrs) {
@@ -1353,15 +1348,8 @@ send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char
 			return -1;
 		}
 
-		extend = malloc(MAX_SVR_ID);
-		if (extend == NULL) {
-			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "malloc failure");
-			return -1;
-		}
+		extend = svr_conns[i]->svr_id;
 
-		svr_id_len = strlen(svr_conns[i]->svr_id);
-		extend[svr_id_len] = '\0';
-		strncpy(extend, svr_conns[i]->svr_id, svr_id_len);
 		pbs_sd = svr_conns[i]->sd;
 	/* } */
 

@@ -2217,7 +2217,7 @@ random_srv_conn(svr_conn_t **svr_connections)
 	srand(time(0));
 	ind =  rand() % get_current_servers();
 
-	if ((svr_connections[ind] != NULL) && svr_connections[ind]->state == SVR_CONN_STATE_CONNECTED)
+	if (svr_connections[ind] && svr_connections[ind]->state == SVR_CONN_STATE_CONNECTED)
 		return svr_connections[ind]->sd;
 		
 	return get_available_conn(svr_connections);
