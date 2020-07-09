@@ -1306,6 +1306,7 @@ update_job_can_not_run(int pbs_sd, resource_resv *job, schd_error *err)
 static int
 send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char *svr_of_node, char *svr_of_job)
 {
+	int src_svr_index;
 	svr_conn_t **svr_conns = NULL;
 	int i = 0;
 	char *extend = NULL;
@@ -1350,7 +1351,12 @@ send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char
 
 		extend = svr_conns[i]->svr_id;
 
-		pbs_sd = svr_conns[i]->sd;
+		src_svr_index = get_svr_index(svr_of_job);
+		if (src_svr_index == -1) {
+			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
+				"No matching for the source server to where the job is going to be sent");	
+		}
+		pbs_sd = svr_conns[src_svr_index]->sd;
 	/* } */
 
 	if (sc_attrs.runjob_mode == RJ_EXECJOB_HOOK)

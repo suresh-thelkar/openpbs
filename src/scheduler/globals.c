@@ -190,5 +190,3 @@ struct schedattrs sc_attrs;
 time_t last_attr_updates = 0;
 
 int send_job_attr_updates = 1;
-
-int svr_conn_index = 0;
