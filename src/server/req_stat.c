@@ -500,7 +500,7 @@ status_que(pbs_queue *pque, struct batch_request *preq, pbs_list_head *pstathd)
 		pque->qu_attr[(int)QA_ATR_TotalJobs].at_val.at_long = pque->qu_numjobs -
 			(pque->qu_njstate[JOB_STATE_MOVED] + pque->qu_njstate[JOB_STATE_FINISHED] + pque->qu_njstate[JOB_STATE_EXPIRED]);
 	}
-	pque->qu_attr[(int)QA_ATR_TotalJobs].at_flags |= ATR_VFLAG_SET|ATR_VFLAG_MODCACHE;
+	pque->qu_attr[(int)QA_ATR_TotalJobs].at_flags |= ATR_SET_MOD_MCACHE;
 
 	update_state_ct(&pque->qu_attr[(int)QA_ATR_JobsByState],
 		pque->qu_njstate,
@@ -643,8 +643,7 @@ status_node(struct pbsnode *pnode, struct batch_request *preq, pbs_list_head *ps
 
 	if (pnode->nd_state != pnode->nd_attr[(int)ND_ATR_state].at_val.at_long) {
 		pnode->nd_attr[(int)ND_ATR_state].at_val.at_long = pnode->nd_state;
-		pnode->nd_attr[(int)ND_ATR_state].at_flags |= ATR_VFLAG_MODIFY |
-			ATR_VFLAG_MODCACHE;
+		pnode->nd_attr[(int)ND_ATR_state].at_flags |= ATR_MOD_MCACHE;
 	}
 
 	/*node is provisioning - mask out the DOWN/UNKNOWN flags while prov is on*/
@@ -719,7 +718,7 @@ update_isrunhook(attribute *pattr)
 
 	if (new_val != old_val) {
 		pattr->at_val.at_long = new_val;
-		pattr->at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+		pattr->at_flags |= ATR_SET_MOD_MCACHE;
 	}
 }
 
@@ -742,19 +741,19 @@ req_stat_svr(struct batch_request *preq)
 
 	/* update count and state counts from sv_numjobs and sv_jobstates */
 
-	server.sv_attr[(int)SRV_ATR_TotalJobs].at_val.at_long = server.sv_qs.sv_numjobs;
-	server.sv_attr[(int)SRV_ATR_TotalJobs].at_flags |= ATR_VFLAG_SET|ATR_VFLAG_MODCACHE;
-	update_state_ct(&server.sv_attr[(int)SRV_ATR_JobsByState],
+	server.sv_attr[(int)SVR_ATR_TotalJobs].at_val.at_long = server.sv_qs.sv_numjobs;
+	server.sv_attr[(int)SVR_ATR_TotalJobs].at_flags |= ATR_SET_MOD_MCACHE;
+	update_state_ct(&server.sv_attr[(int)SVR_ATR_JobsByState],
 		server.sv_jobstates,
 		server.sv_jobstbuf);
 
-	update_license_ct(&server.sv_attr[(int)SRV_ATR_license_count],
+	update_license_ct(&server.sv_attr[(int)SVR_ATR_license_count],
 		server.sv_license_ct_buf);
 
 	conn = get_conn(preq->rq_conn);
 	if (conn->conn_origin == CONN_SCHED_PRIMARY) {
 		/* Request is from sched so update "has_runjob_hook" */
-		update_isrunhook(&server.sv_attr[SRV_ATR_has_runjob_hook]);
+		update_isrunhook(&server.sv_attr[SVR_ATR_has_runjob_hook]);
 	}
 
 	/* allocate a reply structure and a status sub-structure */
@@ -779,7 +778,7 @@ req_stat_svr(struct batch_request *preq)
 
 	bad = 0;
 	pal = (svrattrl *)GET_NEXT(preq->rq_ind.rq_status.rq_attr);
-	if (status_attrib(pal, svr_attr_def, server.sv_attr, SRV_ATR_LAST,
+	if (status_attrib(pal, svr_attr_def, server.sv_attr, SVR_ATR_LAST,
 		preq->rq_perm, &pstat->brp_attr, &bad))
 		reply_badattr(PBSE_NOATTR, bad, pal, preq);
 	else
@@ -908,7 +907,7 @@ update_state_ct(attribute *pattr, int *ct_array, char *buf)
 			*(ct_array + index));
 	}
 	pattr->at_val.at_str = buf;
-	pattr->at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+	pattr->at_flags |= ATR_SET_MOD_MCACHE;
 }
 
 /**
@@ -928,7 +927,7 @@ update_license_ct(attribute *pattr, char *buf)
 			licenses.lb_glob_floating, licenses.lb_aval_floating,
 			licenses.lb_used_floating, licenses.lb_high_used_floating);
 	pattr->at_val.at_str = buf;
-	pattr->at_flags |= ATR_VFLAG_SET | ATR_VFLAG_MODCACHE;
+	pattr->at_flags |= ATR_SET_MOD_MCACHE;
 }
 
 /**

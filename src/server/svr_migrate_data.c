@@ -151,19 +151,10 @@ char *path_scheddb_new;
 
 /* Private functions in this file */
 extern int chk_save_file(char *filename);
-extern void rm_files(char *dirname);
-
-/* extern definitions to older FS based object recovery functions */
-extern job *job_recov_fs(char *filename);
-extern void *job_or_resv_recov_fs(char *filename, int objtype);
 extern char *build_path(char *parent, char *name, char *sufix);
 
 #ifdef NAS /* localmod 005 */
-
-extern int resv_save_db(resc_resv *presv, int updatetype);
-
 extern int pbsd_init(int type);
-
 #endif /* localmod 005 */
 extern void init_server_attrs();
 
@@ -200,7 +191,6 @@ int
 svr_migrate_data()
 {
 	int db_maj_ver, db_min_ver;
-	int i;
 
 	/* if no fs serverdb exists then check db version */
 	if (pbs_db_get_schema_version(svr_db_conn, &db_maj_ver, &db_min_ver) != 0) {
@@ -218,11 +208,6 @@ svr_migrate_data()
 		/* read all data, including node data, and save all nodes again */
 		if (pbsd_init(RECOV_WARM) != 0) {
 			return -1;
-		}
-
-		/* loop through all the nodes and mark for update */
-		for (i = 0; i < svr_totnodes; i++) {
-			pbsndlist[i]->nd_modified = NODE_UPDATE_OTHERS;
 		}
 
 		if (save_nodes_db(0, NULL) != 0) {

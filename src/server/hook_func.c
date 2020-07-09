@@ -2589,12 +2589,7 @@ set_exec_time(job *pjob, char *new_exec_time_str, char *msg,
 		int newstate, newsub;
 		FILE	*fp_debug_out = NULL;
 
-		snprintf(msg, msg_len-1,
-			"'%s' hook set job's %s = %s",
-			hook_name,
-			ATTR_a,
-			exec_time_ctime);
-		pjob->ji_modified = 1;
+		snprintf(msg, msg_len, "'%s' hook set job's %s = %s", hook_name, ATTR_a, exec_time_ctime);
 		svr_evaljobstate(pjob, &newstate, &newsub, 0);
 		(void)svr_setjobstate(pjob, newstate, newsub);
 
@@ -2703,7 +2698,6 @@ set_hold_types(job *pjob, char *new_hold_types_str,
 	if (old_hold != pjob->ji_wattr[(int)JOB_ATR_hold].at_val.at_long) {
 		FILE	*fp_debug_out = NULL;
 		/* indicate attributes changed */
-		pjob->ji_modified = 1;
 		svr_evaljobstate(pjob, &newstate, &newsub, 0);
 		(void)svr_setjobstate(pjob, newstate, newsub);
 
@@ -3141,18 +3135,16 @@ set_job_reslist(job *pjob, char *hook_name, char *msg, int msg_len,
 
 	/* The following forces new job's Resource_List values to be seen */
 	/* in qstat -f */
-	jb->at_flags |= (ATR_VFLAG_MODIFY|ATR_VFLAG_MODCACHE);
+	jb->at_flags |= ATR_MOD_MCACHE;
 
-	pseldef = find_resc_def(svr_resc_def, "select", svr_resc_size);
-	if (pseldef != NULL) {
-		presc = find_resc_entry(jb, pseldef);
-		if (presc && (presc->rs_value.at_flags & ATR_VFLAG_DEFLT)) {
-			/* changing Resource_List and select is a default */
-			/* clear "select" so it is rebuilt in set_resc_deflt */
-			pseldef->rs_free(&presc->rs_value);
-		}
-		(void)set_resc_deflt((void *)pjob, JOB_OBJECT, NULL);
+	pseldef = &svr_resc_def[RESC_SELECT];
+	presc = find_resc_entry(jb, pseldef);
+	if (presc && (presc->rs_value.at_flags & ATR_VFLAG_DEFLT)) {
+		/* changing Resource_List and select is a default */
+		/* clear "select" so it is rebuilt in set_resc_deflt */
+		pseldef->rs_free(&presc->rs_value);
 	}
+	(void)set_resc_deflt((void *)pjob, JOB_OBJECT, NULL);
 	free(val_str_dup);
 	return (0);
 }
@@ -3297,7 +3289,6 @@ attribute_jobmap_restore(job *pjob, struct attribute_jobmap *a_map)
 					attr_name);
 				log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB,
 					LOG_INFO, pjob->ji_qs.ji_jobid, log_buffer);
-				pjob->ji_modified = 1;
 			}
 		} else if (pattr->at_flags & ATR_VFLAG_SET) {
 			/* original/saved value is unset, and yet current */
@@ -3309,15 +3300,12 @@ attribute_jobmap_restore(job *pjob, struct attribute_jobmap *a_map)
 					attr_name);
 				log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB,
 					LOG_INFO, pjob->ji_qs.ji_jobid, log_buffer);
-				pjob->ji_modified = 1;
 			}
 		}
 	}
 
-	if (pjob->ji_modified) {
-		svr_evaljobstate(pjob, &newstate, &newsub, 0);
-		(void)svr_setjobstate(pjob, newstate, newsub);
-	}
+	svr_evaljobstate(pjob, &newstate, &newsub, 0);
+	(void)svr_setjobstate(pjob, newstate, newsub);
 }
 
 /*
@@ -3567,8 +3555,8 @@ do_runjob_reject_actions(job *pjob, char *hook_name)
 	}
 
 	/* update the eligible time to JOB_INITIAL */
-	if ((server.sv_attr[SRV_ATR_EligibleTimeEnable].at_flags & ATR_VFLAG_SET)
-		&& server.sv_attr[SRV_ATR_EligibleTimeEnable].at_val.at_long == 1)
+	if ((server.sv_attr[SVR_ATR_EligibleTimeEnable].at_flags & ATR_VFLAG_SET)
+		&& server.sv_attr[SVR_ATR_EligibleTimeEnable].at_val.at_long == 1)
 		update_eligible_time(JOB_INITIAL, pjob);
 
 	/*
@@ -4326,9 +4314,9 @@ int server_process_hooks(int rq_type, char *rq_user, char *rq_host, hook *phook,
 			char *qname = ((struct rq_queuejob *)req_ptr->rq_job)->rq_destin;
 			/* use default queue if user did not specify a queue for the job */
 			if ((!qname || *qname == '\0' || *qname == '@') &&
-				server.sv_attr[SRV_ATR_dflt_que].at_flags & ATR_VFLAG_SET)
+				server.sv_attr[SVR_ATR_dflt_que].at_flags & ATR_VFLAG_SET)
 				fprintf(fp_debug, "%s.queue=%s\n", EVENT_JOB_OBJECT,
-						server.sv_attr[SRV_ATR_dflt_que].at_val.at_str);
+						server.sv_attr[SVR_ATR_dflt_que].at_val.at_str);
 			else
 				fprintf(fp_debug, "%s.queue=%s\n", EVENT_JOB_OBJECT, qname);
 		}
@@ -6152,8 +6140,8 @@ next_sync_mom_hookfiles(void)
 	short timed_out = 0;
 
 	timeout_sec = SYNC_MOM_HOOKFILES_TIMEOUT_TPP;
-	if (server.sv_attr[(int)SRV_ATR_sync_mom_hookfiles_timeout].at_flags & ATR_VFLAG_SET)
-		timeout_sec = server.sv_attr[(int)SRV_ATR_sync_mom_hookfiles_timeout].at_val.at_long;
+	if (server.sv_attr[(int)SVR_ATR_sync_mom_hookfiles_timeout].at_flags & ATR_VFLAG_SET)
+		timeout_sec = server.sv_attr[(int)SVR_ATR_sync_mom_hookfiles_timeout].at_val.at_long;
 	current_time = time(NULL);
 	timeout_time = g_sync_hook_time + timeout_sec;
 
@@ -6335,10 +6323,8 @@ get_server_hook_results(char *input_file, int *accept_flag, int *reject_flag, ch
 	svrattrl *plist = NULL;
 	struct pbsnode *pnode;
 	int	bad = 0;
-	int	ndtype_flag = 0;
 	char	*pbse_err;
 	char	raw_err[10];
-	int	update_db = 0;
 
 	/* Preset hook_euser for later.  If we are reading a job related     */
 	/* copy of hook results, there will be one or more (one per hook)    */
@@ -6665,7 +6651,6 @@ get_server_hook_results(char *input_file, int *accept_flag, int *reject_flag, ch
 					log_event(PBSEVENT_DEBUG3, PBS_EVENTCLASS_HOOK,
 						LOG_INFO, vname_str, "node_name not found");
 				} else if ((pnode->nd_state & INUSE_DELETED) == 0) {
-					save_characteristic(pnode);
 
 					rc = mgr_set_attr(pnode->nd_attr, node_attr_def, ND_ATR_LAST,
 								plist, ATR_DFLAG_WRACC, &bad, (void *)pnode, ATR_ACTION_ALTER);
@@ -6677,9 +6662,6 @@ get_server_hook_results(char *input_file, int *accept_flag, int *reject_flag, ch
 								pbse_err ? pbse_err : raw_err);
 						log_err(PBSE_SYSTEM, __func__, log_buffer);
 					} else {
-						(void)chk_characteristic(pnode, &ndtype_flag);
-						update_db |= ndtype_flag;
-
 						mgr_log_attr(msg_man_set, plist,
 							PBS_EVENTCLASS_NODE, pnode->nd_name, NULL);
 					}
@@ -6700,12 +6682,8 @@ get_server_hook_results(char *input_file, int *accept_flag, int *reject_flag, ch
 		}
 		line_data[0] = '\0';
 	}
-	if (update_db & WRITE_NEW_NODESFILE) {
-		/*create/delete/prop/ntype change*/
-		(void)save_nodes_db(0, NULL);
-	} else if (update_db & WRITENODE_STATE) {
-		write_node_state();
-	}
+
+	save_nodes_db(0, NULL);
 
 	rc = 0;
 

@@ -115,7 +115,7 @@
 #include "libpbs.h"
 #include "credential.h"
 #include "batch_request.h"
-#include "avltree.h"
+#include "pbs_idx.h"
 #include "pbs_nodes.h"
 #include "svrfunc.h"
 #include "tracking.h"
@@ -251,7 +251,7 @@ char		server_name[PBS_MAXSERVERNAME+1]; /* host_name[:service|port] */
 char		server_host[PBS_MAXHOSTNAME+1];	  /* host_name of this svr */
 int		reap_child_flag = 0;
 time_t		secondary_delay = 30;
-struct server	server;		/* the server structure */
+struct server	server = {{0}};		/* the server structure */
 pbs_sched	*dflt_scheduler = NULL; /* the default scheduler */
 int		shutdown_who;		/* see req_shutdown() */
 char	       *mom_host = server_host;
@@ -296,7 +296,9 @@ struct batch_request	*saved_takeover_req=NULL;
 struct python_interpreter_data  svr_interp_data;
 int svr_unsent_qrun_req = 0;	/* Set to 1 for scheduling unsent qrun requests */
 
-AVL_IX_DESC *AVL_jctx = NULL;
+void *jobs_idx = NULL;
+void *queues_idx = NULL;
+void *resvs_idx = NULL;
 sigset_t	allsigs;
 
 int	have_blue_gene_nodes = 0;	/* BLUE GENE only */
@@ -461,8 +463,8 @@ tpp_request(int fd)
 	 * appear sluggish if not interleaved.
 	 *
 	 */
-	if (server.sv_attr[(int) SRV_ATR_rpp_max_pkt_check].at_flags & ATR_VFLAG_SET)
-		rpp_max_pkt_check = server.sv_attr[(int) SRV_ATR_rpp_max_pkt_check].at_val.at_long;
+	if (server.sv_attr[(int) SVR_ATR_rpp_max_pkt_check].at_flags & ATR_VFLAG_SET)
+		rpp_max_pkt_check = server.sv_attr[(int) SVR_ATR_rpp_max_pkt_check].at_val.at_long;
 
 	for (iloop = 0; iloop < rpp_max_pkt_check; iloop++) {
 		int	stream;
@@ -743,8 +745,6 @@ main(int argc, char **argv)
 	char			lockfile[MAXPATHLEN+1];
 	char			**origevp;
 	char			*pc;
-	job			*pjob;
-	resc_resv		*presv;
 	pbs_queue		*pque;
 	char			*servicename;
 	time_t			svrlivetime;
@@ -904,7 +904,7 @@ main(int argc, char **argv)
 	while ((c = getopt(argc, argv, "A:a:Cd:e:F:p:t:lL:M:NR:S:g:G:s:P:-:")) != -1) {
 		switch (c) {
 			case 'a':
-				if (decode_b(&server.sv_attr[(int)SRV_ATR_scheduling], NULL,
+				if (decode_b(&server.sv_attr[(int)SVR_ATR_scheduling], NULL,
 					NULL, optarg) != 0) {
 					(void)fprintf(stderr, "%s: bad -a option\n", argv[0]);
 					return (1);
@@ -1113,10 +1113,9 @@ main(int argc, char **argv)
 	 * set log_event_mask to point to the log_event attribute value so
 	 * it controls which events are logged.
 	 */
-	server.sv_attr[(int)SRV_ATR_log_events].at_val.at_long = PBSEVENT_MASK;
-	server.sv_attr[(int)SRV_ATR_log_events].at_flags =
-		ATR_VFLAG_SET|ATR_VFLAG_MODCACHE;
-	log_event_mask = &server.sv_attr[SRV_ATR_log_events].at_val.at_long;
+	server.sv_attr[(int)SVR_ATR_log_events].at_val.at_long = PBSEVENT_MASK;
+	server.sv_attr[(int)SVR_ATR_log_events].at_flags = ATR_SET_MOD_MCACHE;
+	log_event_mask = &server.sv_attr[SVR_ATR_log_events].at_val.at_long;
 	(void)sprintf(path_log, "%s/%s", pbs_conf.pbs_home_path, PBS_LOGFILES);
 
 	(void)log_open(log_file, path_log);
@@ -1556,7 +1555,7 @@ try_db_again:
 		(void)set_task(WORK_Timed, time_now, secondary_handshake, NULL);
 
 		svr_mailowner(0, 0, 1, log_buffer);
-		if (server.sv_attr[(int)SRV_ATR_scheduling].at_val.at_long) {
+		if (server.sv_attr[(int)SVR_ATR_scheduling].at_val.at_long) {
 			/* Bring up scheduler here */
 			pbs_scheduler_addr = get_hostaddr(pbs_conf.pbs_secondary);
 			dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
@@ -1603,7 +1602,7 @@ try_db_again:
 	 * following section constitutes the "main" loop of the server
 	 */
 
-	state  = &server.sv_attr[(int)SRV_ATR_State].at_val.at_long;
+	state  = &server.sv_attr[(int)SVR_ATR_State].at_val.at_long;
 	if (server_init_type == RECOV_HOT)
 		*state = SV_STATE_HOT;
 	else
@@ -1683,7 +1682,7 @@ try_db_again:
 			if (stat(path_secondaryact, &sb_sa) == -1) {
 				if (errno == ENOENT) {
 					/* file gone, restart to go idle */
-					server.sv_attr[(int)SRV_ATR_State].at_val.at_long = SV_STATE_SECIDLE;
+					server.sv_attr[(int)SVR_ATR_State].at_val.at_long = SV_STATE_SECIDLE;
 					break;
 				}
 			}
@@ -1814,31 +1813,10 @@ try_db_again:
 	}
 	DBPRT(("Server out of main loop, state is %ld\n", *state))
 
-	svr_save_db(&server, SVR_SAVE_FULL);	/* final recording of server */
+	/* set the current seq id to the last id before final save */
+	server.sv_qs.sv_lastid = server.sv_qs.sv_jobidnumber;
+	svr_save_db(&server);	/* final recording of server */
 	track_save(NULL);	/* save tracking data	     */
-
-	/* save any jobs that need saving */
-	for (pjob = (job *)GET_NEXT(svr_alljobs);
-		pjob;
-		pjob = (job *)GET_NEXT(pjob->ji_alljobs)) {
-		if (pjob->ji_modified)
-			(void)job_save(pjob, SAVEJOB_FULLFORCE);
-	}
-
-	/* save any reservations that need saving */
-	for (presv = (resc_resv *)GET_NEXT(svr_allresvs);
-		presv;
-		presv = (resc_resv *)GET_NEXT(presv->ri_allresvs)) {
-
-		if (presv->ri_modified)
-			(void)job_or_resv_save((void *)presv,
-				SAVEJOB_FULL, RESC_RESV_OBJECT);
-	}
-
-	if (svr_chngNodesfile) {/*nodes created/deleted, or props changed and*/
-		/*update in req_manager failed; try again    */
-		(void)save_nodes_db(0, NULL);
-	}
 
 	/* if brought up the Secondary Scheduler, take it down */
 
@@ -1894,15 +1872,11 @@ try_db_again:
 	tpp_shutdown();
 
 	/*
-	 * SERVER is going to be shutdown, delete AVL tree using
-	 * avl_destroy_index() which was created in pbsd_init.c
-	 * by avl_create_index().
+	 * SERVER is going to be shutdown, destroy indexes
 	 */
-	if (AVL_jctx != NULL) {
-		avl_destroy_index(AVL_jctx);
-		free(AVL_jctx);
-		AVL_jctx = NULL;
-	}
+	pbs_idx_destroy(jobs_idx);
+	pbs_idx_destroy(queues_idx);
+	pbs_idx_destroy(resvs_idx);
 
 	{
 		int csret;

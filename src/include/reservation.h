@@ -79,50 +79,7 @@ extern "C" {
  */
 
 enum resv_atr {
-	RESV_ATR_resv_name,
-	RESV_ATR_resv_owner,
-	RESV_ATR_state,
-	RESV_ATR_substate,
-	RESV_ATR_reserve_Tag,
-	RESV_ATR_reserveID,
-	RESV_ATR_start,
-	RESV_ATR_end,
-	RESV_ATR_duration,
-	RESV_ATR_queue,
-	RESV_ATR_resource,
-	RESV_ATR_SchedSelect,
-	RESV_ATR_resc_used,
-	RESV_ATR_resv_nodes,
-	RESV_ATR_userlst,
-	RESV_ATR_grouplst,
-	RESV_ATR_auth_u,
-	RESV_ATR_auth_g,
-	RESV_ATR_auth_h,
-	RESV_ATR_at_server,
-	RESV_ATR_account,
-	RESV_ATR_ctime,
-	RESV_ATR_mailpnts,
-	RESV_ATR_mailuser,
-	RESV_ATR_mtime,
-	RESV_ATR_hashname,
-	RESV_ATR_hopcount,
-	RESV_ATR_priority,
-	RESV_ATR_interactive,
-	RESV_ATR_variables,
-	RESV_ATR_euser,
-	RESV_ATR_egroup,
-	RESV_ATR_convert,
-	RESV_ATR_resv_standing,
-	RESV_ATR_resv_rrule,
-	RESV_ATR_resv_idx,
-	RESV_ATR_resv_count,
-	RESV_ATR_resv_execvnodes,
-	RESV_ATR_resv_timezone,
-	RESV_ATR_retry,
-	RESV_ATR_del_idle_time,
-	RESV_ATR_job,
-	RESV_ATR_node_set,
-	RESV_ATR_partition,
+#include "resv_attr_enum.h"
 	RESV_ATR_UNKN,
 	RESV_ATR_LAST
 };
@@ -197,7 +154,6 @@ struct resc_resv {
 							 */
 	resc_resv		*ri_parent;		/* reservation in a reservation */
 
-	int			ri_modified;		/*struct changed, needs to be saved*/
 	int			ri_giveback;		/*flag, return resources to parent */
 
 	int			ri_vnodes_down;		/* the number of vnodes that are unavailable */
@@ -249,7 +205,9 @@ struct resc_resv {
 	 * some of the items are copies of attributes, if so this
 	 * internal version takes precendent
 	 */
-
+#ifndef PBS_MOM
+	char qs_hash[DIGEST_LENGTH];
+#endif
 	struct resvfix {
 		int		ri_rsversion;		/* reservation struct verison#, see RSVERSION */
 		int		ri_state;		/* internal copy of state */
@@ -260,10 +218,6 @@ struct resc_resv {
 		time_t		ri_tactive;		/* time reservation became active */
 		int		ri_svrflags;		/* server flags */
 		int		ri_numattr;		/* number of attributes in list */
-#if 0
-		int		ri_ordering;		/* special scheduling ordering */
-		int		ri_priority;		/* internal priority */
-#endif
 		long		ri_resvTag;		/* local numeric reservation ID */
 		char		ri_resvID[PBS_MAXSVRRESVID+1]; /* reservation identifier */
 		char		ri_fileprefix[PBS_RESVBASE+1]; /* reservation file prefix */
@@ -288,7 +242,7 @@ struct resc_resv {
 	 * Its presence is for rapid access to the attributes.
 	 */
 	attribute		ri_wattr[RESV_ATR_LAST];  /*reservation's attributes*/
-
+	short			newobj;
 };
 
 /*
@@ -299,13 +253,6 @@ struct resc_resv {
 #define RESV_SVFLG_HASRUN   0x04   /* job has been run before (being rerun */
 #define RESV_SVFLG_Suspend  0x200  /* job suspended (signal suspend) */
 #define RESV_SVFLG_HasNodes 0x1000 /* job has nodes allocated to it */
-
-/*
- * Related defines
- */
-#define SAVERESV_QUICK 0
-#define SAVERESV_FULL  1
-#define SAVERESV_NEW   2
 
 
 #define RESV_FILE_COPY     ".RC"	/* tmp copy while updating */
@@ -329,14 +276,12 @@ struct resc_resv {
 #define	Q_CHNG_ENABLE		0
 #define	Q_CHNG_START		1
 
+extern void *resvs_idx;
 extern resc_resv  *find_resv(char *);
-extern resc_resv  *resc_resv_alloc(void);
+extern resc_resv  *resv_alloc(char *);
+extern resc_resv *resv_recov(char *);
 extern void  resv_purge(resc_resv *);
 extern int start_end_dur_wall(resc_resv *);
-
-#ifdef	_PBS_JOB_H
-extern void*  job_or_resv_recov(char *, int);
-#endif	/* _PBS_JOB_H */
 
 #ifdef	_BATCH_REQUEST_H
 extern resc_resv  *chk_rescResv_request(char *, struct batch_request *);
@@ -372,6 +317,9 @@ extern	void set_old_subUniverse(resc_resv *);
 extern	int  assign_resv_resc(resc_resv *, char *, int);
 extern	void  resv_exclusive_handler(resc_resv *);
 extern  long determine_resv_retry(resc_resv *presv);
+
+extern resc_resv *resv_recov_db(char *resvid, resc_resv *presv);
+extern int resv_save_db(resc_resv *presv);
 
 #ifdef	__cplusplus
 }
