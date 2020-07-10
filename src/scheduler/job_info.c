@@ -1248,7 +1248,7 @@ query_job(struct batch_status *job, server_info *sinfo, schd_error *err)
 			resresv->job->job_name = string_dup(attrp->value);
 
 		else if (!strcmp(attrp->name, ATTR_server))
-			resresv->job->pbs_server_name = string_dup(attrp->value);
+			resresv->job->svr_name = string_dup(attrp->value);
 
 		else if (!strcmp(attrp->name, ATTR_state)) { /* state of job */
 			if (set_job_state(attrp->value, resresv->job) == 0) {
@@ -1483,7 +1483,7 @@ new_job_info()
 	jinfo->resreq_rel = NULL;
 	jinfo->depend_job_str = NULL;
 	jinfo->dependent_jobs = NULL;
-	jinfo->pbs_server_name = NULL;
+	jinfo->svr_name = NULL;
 
 
 	jinfo->formula_value = 0.0;
@@ -1547,8 +1547,8 @@ free_job_info(job_info *jinfo)
 	if (jinfo->dependent_jobs != NULL)
 		free(jinfo->dependent_jobs);
 
-	if (jinfo->pbs_server_name != NULL)
-		free(jinfo->pbs_server_name);
+	if (jinfo->svr_name != NULL)
+		free(jinfo->svr_name);
 
 	free_resource_req_list(jinfo->resused);
 
@@ -2861,7 +2861,7 @@ dup_job_info(job_info *ojinfo, queue_info *nqinfo, server_info *nsinfo)
 
 	njinfo->depend_job_str = string_dup(njinfo->depend_job_str);
 
-	njinfo->pbs_server_name = string_dup(ojinfo->pbs_server_name);
+	njinfo->svr_name = string_dup(ojinfo->svr_name);
 
 #ifdef RESC_SPEC
 	njinfo->rspec = dup_rescspec(ojinfo->rspec);

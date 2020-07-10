@@ -319,7 +319,7 @@ query_nodes(int pbs_sd, server_info *sinfo)
 			ATTR_NODE_last_state_change_time,
 			ATTR_NODE_last_used_time,
 			ATTR_NODE_resvs,
-			ATTR_pbs_server,
+			ATTR_server,
 			NULL
 	};
 
@@ -524,9 +524,9 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 			}
 		}
 
-		else if(!strcmp(attrp->name, ATTR_pbs_server)) {
-			ninfo->pbs_server_name = string_dup(attrp->value);
-			if (ninfo->pbs_server_name == NULL) {
+		else if(!strcmp(attrp->name, ATTR_server)) {
+			ninfo->svr_name = string_dup(attrp->value);
+			if (ninfo->svr_name == NULL) {
 				log_err(errno, __func__, MEM_ERR_MSG);
 				return NULL;
 			}
@@ -777,7 +777,7 @@ new_node_info()
 #endif
 	new->partition = NULL;
 	new->np_arr = NULL;
-	new->pbs_server_name = NULL;
+	new->svr_name = NULL;
 	return new;
 }
 
@@ -966,8 +966,8 @@ free_node_info(node_info *ninfo)
 		if (ninfo->partition != NULL)
 			free(ninfo->partition);
 
-		if (ninfo->pbs_server_name != NULL)
-			free(ninfo->pbs_server_name);
+		if (ninfo->svr_name != NULL)
+			free(ninfo->svr_name);
 
 		if (ninfo->np_arr != NULL)
 			free(ninfo->np_arr);
@@ -1680,7 +1680,7 @@ dup_node_info(node_info *onode, server_info *nsinfo,
 
 	nnode->server = nsinfo;
 	nnode->name = string_dup(onode->name);
-	nnode->pbs_server_name = string_dup(onode->pbs_server_name);
+	nnode->svr_name = string_dup(onode->svr_name);
 	nnode->mom = string_dup(onode->mom);
 	nnode->queue_name = string_dup(onode->queue_name);
 

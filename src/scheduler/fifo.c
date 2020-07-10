@@ -1312,52 +1312,50 @@ send_run_job(int pbs_sd, int has_runjob_hook, char *jobid, char *execvnode, char
 	char *extend = NULL;
 	int num_conf_svrs = get_current_servers();
 
-	/* if (num_conf_svrs > 1) { */
-		svr_conns = (svr_conn_t **)get_conn_servers(pbs_sd);
-		if (svr_conns == NULL) {
-			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "Error in getting svr_conns table");
+	svr_conns = (svr_conn_t **)get_conn_servers(pbs_sd);
+	if (svr_conns == NULL) {
+		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "Error in getting svr_conns table");
+		return -1;
+	}
+
+
+	for (i = 0; i < num_conf_svrs; i++) {
+		char *colon_ptr;
+
+		if (svr_conns[i] == NULL)
+			continue;
+
+		colon_ptr = strchr(svr_conns[i]->svr_id, ':') ;
+		if (colon_ptr == NULL) {
+			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "malformed svr_id");
 			return -1;
 		}
 
+		*colon_ptr = '\0';
 
-		for (i = 0; i < num_conf_svrs; i++) {
-			char *colon_ptr;
-
-			if (svr_conns[i] == NULL)
-				continue;
-
-			colon_ptr = strstr(svr_conns[i]->svr_id, ":") ;
-			if (colon_ptr == NULL) {
-				log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "malformed svr_id");
-				return -1;
-			}
-
-			*colon_ptr = '\0';
-
-			if (strcmp(svr_conns[i]->svr_id, svr_of_node) == 0) {
-				*colon_ptr = ':';
-				break;
-			}
-			
+		if (strcmp(svr_conns[i]->svr_id, svr_of_node) == 0) {
 			*colon_ptr = ':';
-			
+			break;
 		}
+		
+		*colon_ptr = ':';
+		
+	}
 
-		if (i == num_conf_svrs) {
-			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
-				"No matching for the source server to where the job is going to be sent");
-			return -1;
-		}
+	if (i == num_conf_svrs) {
+		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
+			"No matching for the source server to where the job is going to be sent");
+		return -1;
+	}
 
-		extend = svr_conns[i]->svr_id;
+	extend = svr_conns[i]->svr_id;
 
-		src_svr_index = get_svr_index(svr_of_job);
-		if (src_svr_index == -1) {
-			log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
-				"No matching for the source server to where the job is going to be sent");	
-		}
-		pbs_sd = svr_conns[src_svr_index]->sd;
-	/* } */
+	src_svr_index = get_svr_index(svr_of_job);
+	if (src_svr_index == -1) {
+		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
+			"No matching for the source server to where the job is going to be sent");	
+	}
+	pbs_sd = svr_conns[src_svr_index]->sd;
 
 	if (sc_attrs.runjob_mode == RJ_EXECJOB_HOOK)
 		return pbs_runjob(pbs_sd, jobid, execvnode, extend);
@@ -1394,7 +1392,7 @@ run_job(int pbs_sd, resource_resv *rjob, char *execvnode, int has_runjob_hook, s
 	if (rjob == NULL || rjob->job == NULL || err == NULL)
 		return -1;
 
-	svr_of_job = rjob->job->pbs_server_name;
+	svr_of_job = rjob->job->svr_name;
 
 	/* Server most likely crashed */
 	if (got_sigpipe) {
@@ -1681,7 +1679,7 @@ run_update_resresv(status *policy, int pbs_sd, server_info *sinfo,
 					fflush(stdout);
 #endif /* localmod 031 */
 
-					svr_of_node =  ns[0]->ninfo->pbs_server_name;
+					svr_of_node =  ns[0]->ninfo->svr_name;
 
 					pbsrc = run_job(pbs_sd, rr, execvnode, sinfo->has_runjob_hook, err, svr_of_node);
 

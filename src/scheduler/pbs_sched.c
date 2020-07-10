@@ -1464,7 +1464,7 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		return -1;
 	}
 
-	colon_ptr = strstr(svr_id, ":") ;
+	colon_ptr = strchr(svr_id, ':') ;
 	if (colon_ptr == NULL) {
 		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "malformed svr_id");
 		return -1;

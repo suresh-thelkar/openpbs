@@ -399,7 +399,7 @@ initialize_pbsnode(struct pbsnode *pnode, char *pname, int ntype)
 	pnode->nd_attr[(int)ND_ATR_Sharing].at_flags =
 		ATR_VFLAG_SET|ATR_VFLAG_DEFLT;
 
-	set_attr_svr(&(pnode->nd_attr[(int) ND_ATR_pbs_server]), &node_attr_def[(int) ND_ATR_pbs_server], pbs_conf.pbs_server_name);
+	set_attr_svr(&(pnode->nd_attr[(int) ND_ATR_at_server]), &node_attr_def[(int) ND_ATR_at_server], pbs_conf.pbs_server_name);
 
 	pat1 = &pnode->nd_attr[(int)ND_ATR_ResourceAvail];
 	pat2 = &pnode->nd_attr[(int)ND_ATR_ResourceAssn];

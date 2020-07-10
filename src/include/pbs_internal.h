@@ -192,7 +192,7 @@ extern "C" {
 /* Default value of preempt_sort */
 #define PBS_PREEMPT_SORT_DEFAULT	"min_time_since_start"
 
-#define MAX_ALLOWED_SVRS 20
+#define MAX_ALLOWED_SVRS 100
 
 /* Structure to store each server instance details */
 struct pbs_server_instance 
