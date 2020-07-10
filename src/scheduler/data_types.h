@@ -611,6 +611,7 @@ struct job_info
 	resource_req *resreq_rel;	/* list of resources released */
 	char *depend_job_str;		/* dependent jobs in a ':' separated string */
 	resource_resv **dependent_jobs; /* dependent jobs with runone depenency */
+	char *svr_name;
 
 #ifdef NAS
 	/* localmod 045 */
@@ -737,6 +738,7 @@ struct node_info
 	node_partition *hostset;	/* other vnodes on on the same host */
 	node_scratch nscr;		/* scratch space local to node search code */
 	char *partition;		/* partition to which node belongs to */
+	char *svr_name;			/* svr_id which is of the form server_name:port */
 	time_t last_state_change_time;	/* Node state change at time stamp */
 	time_t last_used_time;		/* Node was last active at this time */
 	te_list *node_events;		/* list of run events that affect the node */

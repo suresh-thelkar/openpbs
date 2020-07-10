@@ -1423,8 +1423,8 @@ static int
 pbsd_init_job(job *pjob, int type)
 {
 	unsigned int d;
-	int	 newstate;
-	int	 newsubstate;
+	int newstate;
+	int newsubstate;
 
 	pjob->ji_momhandle = -1;
 	pjob->ji_mom_prot = PROT_INVALID;

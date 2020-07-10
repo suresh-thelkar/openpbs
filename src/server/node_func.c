@@ -342,11 +342,11 @@ free_prop_list(struct prop *prop)
 int
 initialize_pbsnode(struct pbsnode *pnode, char *pname, int ntype)
 {
-	int	      i;
-	attribute    *pat1;
-	attribute    *pat2;
+	int i;
+	attribute *pat1;
+	attribute *pat2;
 	resource_def *prd;
-	resource     *presc;
+	resource *presc;
 
 	pnode->nd_name    = pname;
 	pnode->nd_ntype   = ntype;
@@ -398,6 +398,8 @@ initialize_pbsnode(struct pbsnode *pnode, char *pname, int ntype)
 	pnode->nd_attr[(int)ND_ATR_Sharing].at_val.at_long = (long)VNS_DFLT_SHARED;
 	pnode->nd_attr[(int)ND_ATR_Sharing].at_flags =
 		ATR_VFLAG_SET|ATR_VFLAG_DEFLT;
+
+	set_attr_svr(&(pnode->nd_attr[(int) ND_ATR_at_server]), &node_attr_def[(int) ND_ATR_at_server], pbs_conf.pbs_server_name);
 
 	pat1 = &pnode->nd_attr[(int)ND_ATR_ResourceAvail];
 	pat2 = &pnode->nd_attr[(int)ND_ATR_ResourceAssn];

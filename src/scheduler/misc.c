@@ -1629,3 +1629,28 @@ free_ptr_array(void *inp)
 		free(arr[i]);
 	free(arr);
 }
+
+/**
+ * @brief	Set the server index value for the svr name
+ *
+ * @param[in]	svrname - name of the server
+ *
+ * @return int
+ * @retval server index
+ * @retval -1 for failure
+ */
+int
+get_svr_index(char *svrname)
+{
+	int i;
+	int svrindex = -1;
+
+	for (i = 0; i < pbs_conf.pbs_current_servers; i++) {
+		if (strcmp(pbs_conf.psi[i]->name, svrname) == 0) {
+			svrindex = i;
+			break;
+		}
+	}
+
+	return svrindex;
+}

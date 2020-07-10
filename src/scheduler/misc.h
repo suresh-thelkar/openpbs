@@ -289,6 +289,8 @@ add_str_to_unique_array(char ***str_arr, char *str);
  */
 void free_ptr_array (void *inp);
 
+int get_svr_index(char *svrname);
+
 #ifdef	__cplusplus
 }
 #endif

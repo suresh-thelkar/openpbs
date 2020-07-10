@@ -193,7 +193,7 @@ __pbs_selectjob(int c, struct attropl *attrib, char *extend)
 
 	for (i = 0; i < get_current_servers(); i++) {
 
-		if (svr_connections[i] && svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
+		if ((svr_connections[i] == NULL) || svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
 			continue;
 
 		c = svr_connections[i]->sd;
@@ -259,7 +259,7 @@ __pbs_selstat(int c, struct attropl *attrib, struct attrl *rattrib, char *extend
 
 	for (i = 0; i < get_current_servers(); i++) {
 
-		if (svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
+		if ((svr_connections[i] == NULL) || svr_connections[i]->state != SVR_CONN_STATE_CONNECTED)
 			continue;
 
 		c = svr_connections[i]->sd;
