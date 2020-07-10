@@ -148,7 +148,7 @@ pthread_mutex_t * get_conn_mutex(int);
 int set_conn_servers(int, void*);
 void * get_conn_servers(int);
 extern svr_conn_t ** initialize_server_conns(int);
-extern int connect_to_servers(char *);
+extern int connect_to_servers(char *, uint, char *);
 /* max number of preempt orderings */
 #define PREEMPT_ORDER_MAX 20
 
@@ -325,6 +325,8 @@ extern void PBS_free_aopl(struct attropl *);
 extern void advise(char *, ...);
 extern int PBSD_rdytocmt(int, char *, int, char **);
 extern int PBSD_commit(int, char *, int, char **);
+extern int PBSD_commit_and_run(int c, char *jobid, char *dest);
+extern int PBSD_runjob(int, char *, char *, char *, int);
 extern int PBSD_jcred(int, int, char *, int, int, char **);
 extern int PBSD_jscript(int, char *, int, char **);
 extern int PBSD_jscript_direct(int, char *, int, char **);
@@ -343,6 +345,7 @@ extern struct batch_reply *PBSD_rdrpy(int);
 extern struct batch_reply *PBSD_rdrpy_sock(int, int *);
 extern void PBSD_FreeReply(struct batch_reply *);
 extern struct batch_status *PBSD_status(int, int, char *, struct attrl *, char *);
+extern int random_srv_conn(svr_conn_t **);
 extern struct batch_status *PBSD_status_aggregate(int, int, char *, struct attrl *, char *, int);
 extern struct batch_status *PBSD_status_random(int, int, char *, struct attrl *, char *, int);
 extern preempt_job_info *PBSD_preempt_jobs(int, char **);

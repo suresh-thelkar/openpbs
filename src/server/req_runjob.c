@@ -143,8 +143,11 @@ extern char *msg_job_abort;
 extern pbs_list_head svr_deferred_req;
 extern time_t time_now;
 extern int   svr_totnodes;	/* non-zero if using nodes */
+extern unsigned int pbs_server_port_dis;
 extern job  *chk_job_request(char *, struct batch_request *, int *, int *);
 extern int send_cred(job *pjob);
+extern int get_hostaddr_port_from_svr(char *, pbs_net_t *, uint *);
+extern int connect_2_svr(pbs_net_t, uint);
 
 
 /* private data */
@@ -282,6 +285,66 @@ call_to_process_hooks(struct batch_request *preq, char *hook_msg, size_t msg_len
 	return rc;
 }
 
+int
+need_to_run_elsewhere(struct batch_request *preq)
+{
+	char destination[PBS_MAX_SRV_INSTANCE + 1];
+	char *pc;
+
+	if (!preq->rq_extend)
+		return FALSE;
+
+	strncpy(destination, preq->rq_extend, PBS_MAX_SRV_INSTANCE);
+	if ((pc = strchr(destination, ':')) != NULL)
+		*pc = '\0';
+	if (strcmp(destination, pbs_conf.pbs_server_name))
+		return TRUE;
+
+	return FALSE;
+}
+
+void
+move_and_runjob(struct batch_request *preq, job *pjob)
+{
+	char *dest;
+	int sock;
+	int conn = -1;
+	pbs_net_t	 hostaddr;
+	unsigned int	 port = pbs_server_port_dis;
+
+	dest = strdup(preq->rq_ind.rq_run.rq_destin);
+	free(preq->rq_ind.rq_run.rq_destin);
+	preq->rq_type = PBS_BATCH_MoveJob;
+	strcpy(preq->rq_ind.rq_move.rq_jid, pjob->ji_qs.ji_jobid);
+	sprintf(preq->rq_ind.rq_move.rq_destin, "%s@%s", pjob->ji_qs.ji_queue, preq->rq_extend);
+	preq->rq_ind.rq_move.run_exec_vnode = dest;
+
+	get_hostaddr_port_from_svr(preq->rq_ind.rq_move.rq_destin, &hostaddr, &port);
+
+	sock = get_peer_server_sock(hostaddr, port);
+	if (sock != -1 && !is_socket_up(sock)) {
+		log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_INFO,
+				__func__, "Error from peer server socket fd, "
+				"closing connection: %d", sock);
+		close_conn(sock);
+		sock = -1;
+	}
+
+	if (sock == -1) {
+		if ((conn = connect_2_svr(hostaddr, port)) == -1) {
+			req_reject(SEND_JOB_FATAL, 0, preq);
+			return;
+		}
+
+		log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SERVER, LOG_INFO,
+			   __func__, "New Peer Server fd of server: %s is :%d",
+			   preq->rq_extend, conn);
+		set_peer_server_conn(conn);
+	}
+
+	req_movejob(preq);
+}
+
 /**
  * @brief
  * 		req_runjob - service the Run Job and Asyc Run Job Requests
@@ -324,6 +387,11 @@ req_runjob(struct batch_request *preq)
 	parent = chk_job_request(jid, preq, &jt, NULL);
 	if (parent == NULL)
 		return;		/* note, req_reject already called */
+
+	if (need_to_run_elsewhere(preq)) {
+		move_and_runjob(preq, parent);
+		return;
+	}
 
 	/* the job must be in an execution queue */
 

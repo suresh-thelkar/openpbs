@@ -282,7 +282,7 @@ local_move(job *jobp, struct batch_request *req)
 	}
 
 
-	if ((pbs_errno = svr_enquejob(jobp)) != 0)
+	if ((pbs_errno = svr_enquejob(jobp, NULL)) != 0)
 		return -1;		/* should never ever get here */
 	account_jobstr(jobp, PBS_ACCT_QUEUE);
 
@@ -675,6 +675,8 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 	struct  hostent *hp;
 	struct in_addr   addr;
 	long		 tempval;
+	int		ret;
+	char		*reject_msg;
 
 	/* if job has a script read it from database */
 	if (jobp->ji_qs.ji_svrflags & JOB_SVFLG_SCRIPT) {
@@ -823,6 +825,7 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 			}
 			sleep(1<<i);
 		}
+
 		if ((con = svr_connect(hostaddr, port, 0, cntype, PROT_TCP)) ==
 			PBS_NET_RC_FATAL) {
 			(void)sprintf(log_buffer, "send_job failed to %lx port %d",
@@ -860,13 +863,11 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 					/* already running, mark it so */
 					log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_INFO, jobp->ji_qs.ji_jobid, "Mom reports job already running");
 					exit(SEND_JOB_OK);
-				}
-				else if ((pbs_errno == PBSE_HOOKERROR) || (pbs_errno == PBSE_HOOK_REJECT)  ||
+				} else if ((pbs_errno == PBSE_HOOKERROR) || (pbs_errno == PBSE_HOOK_REJECT)  ||
 					(pbs_errno == PBSE_HOOK_REJECT_RERUNJOB) || (pbs_errno == PBSE_HOOK_REJECT_DELETEJOB)) {
 					char		name_buf[MAXPATHLEN+1];
 					int		rfd;
 					int		len;
-					char		*reject_msg;
 					int		err;
 
 					err = pbs_errno;
@@ -902,8 +903,7 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 						exit(SEND_JOB_HOOK_REJECT_RERUNJOB);
 					if (err == PBSE_HOOK_REJECT_DELETEJOB)
 						exit(SEND_JOB_HOOK_REJECT_DELETEJOB);
-				}
-				else {
+				} else {
 					(void)sprintf(log_buffer, "send of job to %s failed error = %d", destin, pbs_errno);
 					log_event(PBSEVENT_JOB, PBS_EVENTCLASS_JOB, LOG_INFO, jobp->ji_qs.ji_jobid, log_buffer);
 					continue;
@@ -916,7 +916,6 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 			}
 
 			if (credlen > 0) {
-				int	ret;
 
 				ret = PBSD_jcred(con, jobp->ji_extended.ji_ext.ji_credtype, credbuf, credlen, PROT_TCP, NULL);
 				if ((ret == 0) || (i == (RETRY - 1)))
@@ -939,14 +938,17 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 			jobp->ji_qs.ji_substate = JOB_SUBSTATE_TRNOUTCM;
 		}
 
-		if (PBSD_rdytocmt(con, job_id, PROT_TCP, NULL) != 0)
-			continue;
-
-		if (PBSD_commit(con, job_id, PROT_TCP, NULL) != 0) {
+		if (preq->rq_type == PBS_BATCH_MoveJob && preq->rq_ind.rq_move.run_exec_vnode)
+			ret = PBSD_commit_and_run(con, job_id, preq->rq_ind.rq_move.run_exec_vnode);
+		else
+			ret = PBSD_commit(con, job_id, PROT_TCP, NULL);
+		
+		if (ret != 0) {
 			/* delete the temp script file */
 			unlink(script_name);
 			exit(SEND_JOB_FATAL);
 		}
+
 		svr_disconnect(con);
 
 		/* delete the temp script file */
@@ -969,13 +971,69 @@ send_job(job *jobp, pbs_net_t hostaddr, int port, int move_type,
 		i = SEND_JOB_RETRY;
 	}
 	(void)sprintf(log_buffer, "send_job failed with error %d", pbs_errno);
-	log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_JOB, LOG_NOTICE, jobp->ji_qs.ji_jobid, log_buffer);
+	log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_JOB, LOG_NOTICE, jobp->ji_qs.ji_jobid, log_buffer);
 
 	/* delete the temp script file */
 	unlink(script_name);
 
 	exit(i);
 	return -1;		/* NOT REACHED */
+}
+
+int
+get_hostaddr_port_from_svr(char *destination, pbs_net_t *hostaddr, uint *port)
+{
+	char		*toserver;
+	char		*hostname;
+
+	if ((toserver = strchr(destination, '@')) == NULL) {
+		sprintf(log_buffer,
+			"no server specified in %s", destination);
+		log_err(-1, __func__, log_buffer);
+		return (-1);
+	}
+
+	toserver++;		/* point to server name */
+	hostname = parse_servername(toserver, port);
+	*hostaddr = get_hostaddr(hostname);
+	return 0;	
+}
+
+int
+connect_2_svr(pbs_net_t hostaddr, uint port)
+{
+	int i;
+	conn_t* conn;
+	int sock = -1;
+
+	pbs_errno = 0;
+
+	for (i = 0; i < RETRY; i++) {
+
+		/* connect to receiving server with retries */
+
+		if (i > 0) { /* recycle after an error */
+			if (sock >= 0)
+				svr_disconnect(sock);
+			if (should_retry_route(pbs_errno) == -1)
+				exit(SEND_JOB_FATAL); /* fatal error, don't retry */
+			sleep(1 << i);
+		}
+		if ((sock = svr_connect(hostaddr, port, 0, ToServerDIS, PROT_TCP)) == PBS_NET_RC_FATAL) {
+			log_errf(pbs_errno, __func__, "%s failed to %lx port %d", __func__, hostaddr, port);
+			break;
+		} else if (sock == PBS_NET_RC_RETRY) {
+			pbs_errno = ECONNREFUSED; /* should retry */
+			continue;
+		} else {
+			conn = get_conn(sock);
+			conn->cn_addr = hostaddr;
+			conn->cn_port = port;
+			break;
+		}
+	}
+
+	return sock;
 }
 
 /**
@@ -993,26 +1051,13 @@ int
 net_move(job *jobp, struct batch_request *req)
 {
 	void		*data;
-	char		*destination = jobp->ji_qs.ji_destin;
 	pbs_net_t	 hostaddr;
-	char		*hostname;
 	int		 move_type;
 	unsigned int	 port = pbs_server_port_dis;
 	void	       (*post_func)(struct work_task *);
-	char		*toserver;
 
-	/* Determine to whom are we sending the job */
+	get_hostaddr_port_from_svr(jobp->ji_qs.ji_destin, &hostaddr, &port);
 
-	if ((toserver = strchr(destination, '@')) == NULL) {
-		sprintf(log_buffer,
-			"no server specified in %s", destination);
-		log_err(-1, __func__, log_buffer);
-		return (-1);
-	}
-
-	toserver++;		/* point to server name */
-	hostname = parse_servername(toserver, &port);
-	hostaddr = get_hostaddr(hostname);
 	if (req) {
 		/* note, in this case, req is the orginal Move Request */
 		move_type = MOVE_TYPE_Move;

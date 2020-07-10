@@ -91,6 +91,7 @@ static conn_t **svr_conn;    /* list of pointers to connections indexed by the s
 #define CONNS_ARRAY_INCREMENT	100 /* Increases this many more connection pointers when dynamically allocating memory for svr_conn */
 static int conns_array_size = 0;  /* Size of the svr_conn list, initialized to 0 */
 pbs_list_head svr_allconns; /* head of the linked list of active connections */
+static pbs_list_head peer_svr_conns; /* head of the linked list of peer server connections */
 
 /*
  * The following data is private to this set of network interface routines.
@@ -228,6 +229,7 @@ connection_init(void) {
 
 	if(!svr_allconns.ll_next) {
 		CLEAR_HEAD(svr_allconns);
+		CLEAR_HEAD(peer_svr_conns);
 		return;
 	}
 
@@ -238,6 +240,7 @@ connection_init(void) {
 		close_conn(sock);
 	}
 	CLEAR_HEAD(svr_allconns);
+	CLEAR_HEAD(peer_svr_conns);
 }
 
 /**
@@ -518,7 +521,9 @@ process_socket(int sock)
 		}
 		/* EOF will be handled in cn_func */
 	}
+
 	svr_conn[idx]->cn_func(svr_conn[idx]->cn_sock);
+
 	return 0;
 }
 
@@ -785,6 +790,7 @@ add_conn_priority(int sd, enum conn_type type, pbs_net_t addr, unsigned int port
 
 	/* Add to list of connections */
 	CLEAR_LINK(conn->cn_link);
+	CLEAR_LINK(conn->cn_link_peer_svr);
 	append_link(&svr_allconns, &conn->cn_link, conn);
 
 	if (tpp_em_add_fd(poll_context, sd, EM_IN | EM_HUP | EM_ERR) < 0) {
@@ -808,6 +814,55 @@ add_conn_priority(int sd, enum conn_type type, pbs_net_t addr, unsigned int port
 	}
 
 	return svr_conn[idx];
+}
+
+void
+set_peer_server_conn(int fd)
+{
+	conn_t *conn = get_conn(fd);
+	if (conn) {
+		append_link(&peer_svr_conns, &conn->cn_link_peer_svr, conn);
+		if (tpp_em_del_fd(poll_context, fd) < 0) {
+			int err = errno;
+			snprintf(logbuf, sizeof(logbuf),
+				 "could not remove socket %d from poll list", fd);
+			log_err(err, __func__, logbuf);
+		}
+#ifdef SO_KEEPALIVE
+		int optval = 1;
+
+		if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval)) < 0) {
+			log_errf(-1, __func__, "setsockopt(SO_KEEPALIVE) errno=%d", errno);
+			return;
+		}
+#endif
+	}
+}
+
+int
+is_socket_up(int fd)
+{
+	int error = 0;
+	socklen_t len = sizeof(error);
+	int ret = getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len);
+
+	if (ret || error)
+		return 0;
+
+	return 1;
+}
+
+int
+get_peer_server_sock(pbs_net_t hostaddr, unsigned int port)
+{
+	conn_t *cp;
+
+	for (cp = (conn_t *) GET_NEXT(peer_svr_conns); cp; cp = GET_NEXT(cp->cn_link_peer_svr)) {
+		if (cp->cn_addr == hostaddr && cp->cn_port == port)
+			return cp->cn_sock;
+	}
+
+	return -1;
 }
 
 /**
@@ -958,8 +1013,7 @@ cleanup_conn(int idx)
 			"could not remove socket %d from poll list", svr_conn[idx]->cn_sock);
 		log_err(err, __func__, logbuf);
 	}
-	if (svr_conn[idx]->cn_prio_flag)
-	{
+	if (svr_conn[idx]->cn_prio_flag) {
 		if (tpp_em_del_fd(priority_context, svr_conn[idx]->cn_sock) < 0) {
 			int err = errno;
 			snprintf(logbuf, sizeof(logbuf),
@@ -970,6 +1024,7 @@ cleanup_conn(int idx)
 
 	/* Remove connection from the linked list */
 	delete_link(&svr_conn[idx]->cn_link);
+	delete_link(&svr_conn[idx]->cn_link_peer_svr);
 
 	svr_conn[idx]->cn_physhost[0] = '\0';
 	if (svr_conn[idx]->cn_credid) {
@@ -1050,6 +1105,16 @@ get_connectaddr(int sd)
 		return (0);
 
 	return (svr_conn[idx]->cn_addr);
+}
+
+uint
+get_connectport(int sd)
+{
+	int idx = conn_find_actual_index(sd);
+	if (idx == -1)
+		return (0);
+
+	return (svr_conn[idx]->cn_port);
 }
 
 /**
