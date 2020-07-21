@@ -351,8 +351,6 @@ initialize_pbsnode(struct pbsnode *pnode, char *pname, int ntype)
 	pnode->nd_attr[(int)ND_ATR_Sharing].at_flags =
 		ATR_VFLAG_SET|ATR_VFLAG_DEFLT;
 
-	/* Set the 'server' attribute on the node */
-	node_attr_def[ND_ATR_at_server].at_decode(&pnode->nd_attr[ND_ATR_at_server], NULL, NULL, pbs_server_name);
 
 	pat1 = &pnode->nd_attr[(int)ND_ATR_ResourceAvail];
 	pat2 = &pnode->nd_attr[(int)ND_ATR_ResourceAssn];

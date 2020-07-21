@@ -867,7 +867,7 @@ int
 __pbs_disconnect(int connect)
 {
 	char x;
-	svr_conn_t *svr_conns = NULL;
+	/* svr_conn_t *svr_conns = NULL; */
 
 	if (connect < 0)
 		return 0;
@@ -924,7 +924,7 @@ __pbs_disconnect(int connect)
 	(void)destroy_connection(connect);
 
 	/* Update the server connection cache */
-	svr_conns = get_conn_servers();
+/* 	svr_conns = get_conn_servers();
 	if (svr_conns != NULL) {
 		int i;
 
@@ -938,7 +938,7 @@ __pbs_disconnect(int connect)
 				svr_conns[i].svr_id[0] = '\0';
 			}
 		}
-	}
+	} */
 
 	return 0;
 }

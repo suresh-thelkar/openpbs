@@ -432,7 +432,6 @@ query_nodes(int pbs_sd, server_info *sinfo)
 			ATTR_NODE_last_state_change_time,
 			ATTR_NODE_last_used_time,
 			ATTR_NODE_resvs,
-			ATTR_server,
 			NULL
 	};
 
@@ -624,13 +623,18 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 		if (!strcmp(attrp->name, ATTR_NODE_state))
 			set_node_info_state(ninfo, attrp->value);
 
-		else if (!strcmp(attrp->name, ATTR_server)) {
-			ninfo->svr_index = get_svr_index(attrp->value);
+		else if (!strcmp(attrp->name, ATTR_server_index)) {
+			count = strtol(attrp->value, &endp, 10);
+			if (*endp == '\0')
+				ninfo->svr_index = count;
+			else
+				ninfo->svr_index = -1;
 			if (ninfo->svr_index == -1) {
 				free_node_info(ninfo);
 				return NULL;
 			}
-		}
+		}	
+			
 		/* Host name */
 		else if (!strcmp(attrp->name, ATTR_NODE_Mom)) {
 			if (ninfo->mom)

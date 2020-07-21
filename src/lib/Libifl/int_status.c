@@ -180,10 +180,10 @@ random_srv_conn(svr_conn_t *svr_connections)
  *
  */
 struct batch_status *
-PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend)
+PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend, svr_conn_t *svr_conns)
 {
 	int rc;
-	struct batch_status *PBSD_status_get(int c);
+	struct batch_status *PBSD_status_get(int c, int type, svr_conn_t *svr_conns);
 
 	/* send the status request */
 
@@ -196,7 +196,7 @@ PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend
 	}
 
 	/* get the status reply */
-	return (PBSD_status_get(c));
+	return (PBSD_status_get(c, function, svr_conns));
 }
 
 static void
@@ -438,7 +438,7 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 		if (pbs_client_thread_lock_connection(c) != 0)
 			return NULL;
 
-		if ((next = PBSD_status(c, cmd, id, attrib, extend))) {
+		if ((next = PBSD_status(c, cmd, id, attrib, extend, svr_connections))) {
 			if (!ret) {
 				ret = next;
 				cur = next->last;
@@ -508,7 +508,7 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return NULL;
 
-	ret = PBSD_status(c, cmd, id, attrib, extend);
+	ret = PBSD_status(c, cmd, id, attrib, extend, svr_connections);
 
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)
@@ -528,13 +528,14 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
  * @retval NULL on failure
  */
 struct batch_status *
-PBSD_status_get(int c)
+PBSD_status_get(int c, int type, svr_conn_t *svr_conns)
 {
 	struct brp_cmdstat  *stp; /* pointer to a returned status record */
 	struct batch_status *bsp  = NULL;
 	struct batch_status *rbsp = NULL;
 	struct batch_reply  *reply;
 	int i;
+	struct attrl *pat;
 
 	/* read reply from stream into presentation element */
 
@@ -574,6 +575,36 @@ PBSD_status_get(int c)
 				stp->brp_attrl = 0;
 			bsp->next = NULL;
 			rbsp->last = bsp;
+
+			if (type == PBS_BATCH_StatusJob || type == PBS_BATCH_SelStat || type == PBS_BATCH_StatusNode) {
+				/*Add server_idx attribute */
+				pat = new_attrl();
+				if (pat == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					return NULL;
+				}
+				pat->name = strdup(ATTR_server_index);
+				if (pat->name == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					return NULL;
+				}
+
+				/* 3 because we at most can have 99 servers.  So to represent this in string
+				we need an array of len 2 for server index + 1 for NULL char */
+				pat->value = malloc(3);
+				if (pat->value == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					free(pat->name);
+					return NULL;
+				}
+				sprintf(pat->value, "%d", get_svr_index_sock(c, svr_conns));
+				
+				pat->next = bsp->attribs;			
+				bsp->attribs = pat;					
+			}
+
 			stp = stp->brp_stlink;
 		}
 		if (pbs_errno) {

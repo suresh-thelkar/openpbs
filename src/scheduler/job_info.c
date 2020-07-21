@@ -974,7 +974,6 @@ query_jobs(status *policy, int pbs_sd, queue_info *qinfo, resource_resv **pjobs,
 			ATTR_c,
 			ATTR_r,
 			ATTR_depend,
-			ATTR_server,
 			NULL
 	};
 
@@ -1217,12 +1216,12 @@ query_job(struct batch_status *job, server_info *sinfo, schd_error *err)
 			resresv->job->NAS_pri = resresv->job->priority;
 #endif /* localmod 045 */
 		}
-		else if (!strcmp(attrp->name, ATTR_server)) {
-			resresv->svr_index = get_svr_index(attrp->value);
-			if (resresv->svr_index == -1) {
-				free_resource_resv(resresv);
-				return NULL;
-			}
+		else if (!strcmp(attrp->name, ATTR_server_index)) {
+			count = strtol(attrp->value, &endp, 10);
+			if (*endp == '\0')
+				resresv->svr_index = count;
+			else
+				resresv->svr_index = -1;
 		}
 		else if (!strcmp(attrp->name, ATTR_qtime)) { /* queue time */
 			count = strtol(attrp->value, &endp, 10);

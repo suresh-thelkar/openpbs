@@ -319,6 +319,7 @@ move_and_runjob(struct batch_request *preq, job *pjob)
 	strcpy(preq->rq_ind.rq_move.rq_jid, pjob->ji_qs.ji_jobid);
 	sprintf(preq->rq_ind.rq_move.rq_destin, "%s@%s", pjob->ji_qs.ji_queue, preq->rq_extend);
 	preq->rq_ind.rq_move.run_exec_vnode = dest;
+	/* preq->rq_conn = -1; */
 
 	get_hostaddr_port_from_svr(preq->rq_ind.rq_move.rq_destin, &hostaddr, &port);
 
@@ -342,7 +343,8 @@ move_and_runjob(struct batch_request *preq, job *pjob)
 			   preq->rq_extend, conn);
 		set_peer_server_conn(conn);
 	}
-
+	/* preq->rq_conn = conn;
+ */
 	req_movejob(preq);
 }
 
