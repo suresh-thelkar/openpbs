@@ -135,6 +135,7 @@ int get_conn_errno(int);
 pbs_tcp_chan_t * get_conn_chan(int);
 int set_conn_chan(int, pbs_tcp_chan_t *);
 pthread_mutex_t * get_conn_mutex(int);
+int get_svr_index_sock(int sock, svr_conn_t *svr_conns);
 extern int connect_to_servers(char *, uint, char *);
 /* max number of preempt orderings */
 #define PREEMPT_ORDER_MAX 20
@@ -344,7 +345,7 @@ extern int get_available_conn(svr_conn_t *svr_connections);
 extern struct batch_status *PBSD_status_aggregate(int, int, char *, struct attrl *, char *, int);
 extern struct batch_status *PBSD_status_random(int, int, char *, struct attrl *, char *, int);
 extern preempt_job_info *PBSD_preempt_jobs(int, char **);
-extern struct batch_status *PBSD_status_get(int);
+extern struct batch_status *PBSD_status_get(int, int);
 extern char *PBSD_queuejob(int, char *, char *, struct attropl *, char *, int, char **, int *);
 extern int decode_DIS_svrattrl(int, pbs_list_head *);
 extern int decode_DIS_attrl(int, struct attrl **);

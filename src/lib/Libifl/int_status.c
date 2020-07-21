@@ -183,7 +183,7 @@ struct batch_status *
 PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend)
 {
 	int rc;
-	struct batch_status *PBSD_status_get(int c);
+	struct batch_status *PBSD_status_get(int c, int type);
 
 	/* send the status request */
 
@@ -196,7 +196,7 @@ PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend
 	}
 
 	/* get the status reply */
-	return (PBSD_status_get(c));
+	return (PBSD_status_get(c, function));
 }
 
 static void
@@ -528,13 +528,20 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
  * @retval NULL on failure
  */
 struct batch_status *
-PBSD_status_get(int c)
+PBSD_status_get(int c, int type)
 {
 	struct brp_cmdstat  *stp; /* pointer to a returned status record */
 	struct batch_status *bsp  = NULL;
 	struct batch_status *rbsp = NULL;
 	struct batch_reply  *reply;
 	int i;
+	struct attrl *pat;
+	svr_conn_t *svr_conns;
+
+	svr_conns = get_conn_servers();
+
+	if (svr_conns == NULL)
+		return NULL;
 
 	/* read reply from stream into presentation element */
 
@@ -574,6 +581,36 @@ PBSD_status_get(int c)
 				stp->brp_attrl = 0;
 			bsp->next = NULL;
 			rbsp->last = bsp;
+
+			if (type == PBS_BATCH_StatusJob || type == PBS_BATCH_SelStat || type == PBS_BATCH_StatusNode) {
+				/*Add server_idx attribute */
+				pat = new_attrl();
+				if (pat == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					return NULL;
+				}
+				pat->name = strdup(ATTR_server_index);
+				if (pat->name == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					return NULL;
+				}
+
+				/* Memory of 3 bytes because we at most can have 99 servers.  So to represent this in string
+				we need an array of len 2 for server index + 1 for NULL char */
+				pat->value = malloc(3);
+				if (pat->value == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					free(pat->name);
+					return NULL;
+				}
+				sprintf(pat->value, "%d", get_svr_index_sock(c, svr_conns));
+				
+				pat->next = bsp->attribs;			
+				bsp->attribs = pat;					
+			}
+
 			stp = stp->brp_stlink;
 		}
 		if (pbs_errno) {

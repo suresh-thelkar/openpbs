@@ -624,8 +624,12 @@ query_node_info(struct batch_status *node, server_info *sinfo)
 		if (!strcmp(attrp->name, ATTR_NODE_state))
 			set_node_info_state(ninfo, attrp->value);
 
-		else if (!strcmp(attrp->name, ATTR_server)) {
-			ninfo->svr_index = get_svr_index(attrp->value);
+		else if (!strcmp(attrp->name, ATTR_server_index)) {
+			count = strtol(attrp->value, &endp, 10);
+			if (*endp == '\0')
+				ninfo->svr_index = count;
+			else
+				ninfo->svr_index = -1;
 			if (ninfo->svr_index == -1) {
 				free_node_info(ninfo);
 				return NULL;

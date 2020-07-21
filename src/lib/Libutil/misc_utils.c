@@ -2268,3 +2268,25 @@ rand_num()
 
 	return rand();
 }
+
+/**
+ * @brief 	Used to get server index given socket descriptor
+ * @return int
+ * @retval server index
+ * @retval -1 for failure
+ */
+int
+get_svr_index_sock(int sock, svr_conn_t *svr_conns)
+{
+	int i;
+	int svrindex = -1;
+
+	for (i = 0; i < get_num_servers(); i++) {
+		if (svr_conns[i].sd == sock) {
+			svrindex = i;
+			break;
+		}
+	}
+
+	return svrindex;
+}

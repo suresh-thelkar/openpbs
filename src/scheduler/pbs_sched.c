@@ -1445,7 +1445,6 @@ main(int argc, char *argv[])
 static int
 socket_to_conn(int sock, struct sockaddr_in saddr_in)
 {
-	struct hostent *phe;
 	char *svr_id;
 	int cmd;
 	int svr_conn_index;
@@ -1474,13 +1473,6 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		return -1;
 
 	if (conn_arr[svr_conn_index].sd == -1) {
-		if ((phe = gethostbyaddr((char *) &saddr_in.sin_addr, sizeof(saddr_in.sin_addr), AF_INET)) == NULL) {
-			log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
-				"gethostbyaddr failed, errno=%d in function %s ",  errno, __func__);
-			return -1;
-		}
-
-		strcpy(conn_arr[svr_conn_index].host_name, phe->h_name);
 		/* We will wait to mark this as connected until we get secondary connection */
 		conn_arr[svr_conn_index].state = SVR_CONN_STATE_DOWN;
 		conn_arr[svr_conn_index].state_change_time = time(0);
