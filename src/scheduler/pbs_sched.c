@@ -458,7 +458,11 @@ restart(int sig)
 {
 	if (sig) {
 		int i;
+		int num_conf_svrs_bfore;
 		int num_conf_svrs;
+		svr_conn_t *conn_arr = NULL;
+
+		num_conf_svrs_bfore = get_num_servers();
 
 		log_close(1);
 		pbs_loadconf(1);
@@ -474,6 +478,25 @@ restart(int sig)
 		for (i = 0; i < num_conf_svrs; i++) {
 			if (pbs_conf.psi[i].name != NULL)
 				addclient(pbs_conf.psi[i].name);
+		}
+
+		if (num_conf_svrs > num_conf_svrs_bfore) {
+			conn_arr = pthread_getspecific(psi_key);
+			if (conn_arr != NULL) {
+				conn_arr = realloc(conn_arr, num_conf_svrs * sizeof(svr_conn_t));
+				if (conn_arr == NULL) {
+					log_err(errno, __func__, MEM_ERR_MSG);
+					die(0);
+				}
+			}
+			for (i = num_conf_svrs_bfore; i < num_conf_svrs; i++) {
+				strcpy(conn_arr[i].name, pbs_conf.psi[i].name);
+				conn_arr[i].port = pbs_conf.psi[i].port;
+				conn_arr[i].sd = -1;
+				conn_arr[i].secondary_sd = -1;
+				conn_arr[i].state = SVR_CONN_STATE_DOWN;
+			}
+			pthread_setspecific(psi_key, conn_arr);
 		}
 		
 		sprintf(log_buffer, "restart on signal %d", sig);
