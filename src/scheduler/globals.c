@@ -191,4 +191,3 @@ time_t last_attr_updates = 0;
 
 int send_job_attr_updates = 1;
 
-int entry_to_svr_conns;
