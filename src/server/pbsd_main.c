@@ -1532,7 +1532,7 @@ try_db_again:
 			/* Bring up scheduler here */
 			pbs_scheduler_addr = get_hostaddr(pbs_conf.pbs_secondary);
 			dflt_scheduler->pbs_scheduler_addr = pbs_scheduler_addr;
-			if (contact_sched(SCH_SCHEDULE_NULL, NULL, dflt_scheduler, CONN_SCHED_PRIMARY) < 0) {
+			if (contact_sched(SCH_SCHEDULE_NULL, NULL, dflt_scheduler, CONN_SCHED_SECONDARY) < 0) {
 				char **workenv;
 				char schedcmd[MAXPATHLEN + 1];
 				/* save the current, "safe", environment.
@@ -1695,7 +1695,8 @@ try_db_again:
 					/* cycle */
 					/* NOTE: both primary and secondary scheduler */
 					/* connect must have been setup to be valid */
-					if (psched->sched_cycle_started == 1) {
+					/*TODO Need to handle super high priority commands when we move to mainline */
+/* 					if (psched->sched_cycle_started == 1) {
 						if (put_sched_cmd(psched->scheduler_sock[1],
 								psched->svr_do_schedule, NULL) == 0) {
 							sprintf(log_buffer, "sent scheduler restart scheduling cycle request to %s", psched->sc_name);
@@ -1709,7 +1710,7 @@ try_db_again:
 						log_event(PBSEVENT_DEBUG3,
 							PBS_EVENTCLASS_SERVER,
 							LOG_NOTICE, msg_daemonname, log_buffer);
-					}
+					} */
 					psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 				} else if (((svr_unsent_qrun_req) || ((psched->svr_do_schedule != SCH_SCHEDULE_NULL) &&
 					psched->sch_attr[(int)SCHED_ATR_scheduling].at_val.at_long))
@@ -1797,7 +1798,7 @@ try_db_again:
 	/* if brought up the Secondary Scheduler, take it down */
 
 	if (brought_up_alt_sched == 1)
-		(void)contact_sched(SCH_QUIT, NULL,  dflt_scheduler, CONN_SCHED_PRIMARY);
+		(void)contact_sched(SCH_QUIT, NULL,  dflt_scheduler, CONN_SCHED_SECONDARY);
 
 	/* if Moms are to to down as well, tell them */
 
