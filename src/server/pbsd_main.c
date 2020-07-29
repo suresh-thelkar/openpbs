@@ -1695,7 +1695,8 @@ try_db_again:
 					/* cycle */
 					/* NOTE: both primary and secondary scheduler */
 					/* connect must have been setup to be valid */
-					if (psched->sched_cycle_started == 1) {
+					/*TODO Need to handle super high priority commands when we move to mainline */
+/* 					if (psched->sched_cycle_started == 1) {
 						if (put_sched_cmd(psched->scheduler_sock[1],
 								psched->svr_do_schedule, NULL) == 0) {
 							sprintf(log_buffer, "sent scheduler restart scheduling cycle request to %s", psched->sc_name);
@@ -1709,7 +1710,7 @@ try_db_again:
 						log_event(PBSEVENT_DEBUG3,
 							PBS_EVENTCLASS_SERVER,
 							LOG_NOTICE, msg_daemonname, log_buffer);
-					}
+					} */
 					psched->svr_do_schedule = SCH_SCHEDULE_NULL;
 				} else if (((svr_unsent_qrun_req) || ((psched->svr_do_schedule != SCH_SCHEDULE_NULL) &&
 					psched->sch_attr[(int)SCHED_ATR_scheduling].at_val.at_long))

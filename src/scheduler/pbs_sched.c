@@ -312,7 +312,7 @@ close_server_conn(int svr_index)
 		return;
 
 	if (svr_conns[svr_index].state == SVR_CONN_STATE_CONNECTED) {
-		FD_CLR(svr_conns[svr_index].sd , &master_fdset);
+		FD_CLR(svr_conns[svr_index].secondary_sd , &master_fdset);
 		if (svr_conns[svr_index].sd >= 0) {
 			close_tcp_connection(svr_conns[svr_index].sd);
 			/* unlock the connection level lock */
@@ -861,7 +861,7 @@ main(int argc, char *argv[])
 	char *endp = NULL;
 	pthread_mutexattr_t attr;
 	int num_cfg_svrs;
-	svr_conn_t **svr_conns = NULL;
+	svr_conn_t *svr_conns = NULL;
 	int svr_inst_idx;
 
 	/*the real deal or show version and exit?*/
@@ -1409,16 +1409,11 @@ main(int argc, char *argv[])
 			go = 0;
 	}
 
+	svr_conns = get_conn_servers();
 	/* Make sure that we close all server connections */
 	if (svr_conns != NULL) {
-		for (svr_inst_idx = 0; (svr_inst_idx < num_cfg_svrs); svr_inst_idx++) {
-			close_server_conn(svr_inst_idx);
-		}
-
-		/* destroy ch_shards table */
 		for (svr_inst_idx = 0; svr_inst_idx < get_num_servers(); svr_inst_idx++) {
-			if (svr_conns[svr_inst_idx])
-				free(svr_conns[svr_inst_idx]);
+			close_server_conn(svr_inst_idx);
 		}
 		free(svr_conns);
 	}
@@ -1477,15 +1472,6 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 
 	if ((conn_arr = get_conn_servers()) == NULL)
 		return -1;
-
-	conn_arr[svr_conn_index].port = port;
-
-	if (conn_arr[svr_conn_index].sd != -1 && conn_arr[svr_conn_index].secondary_sd != -1) {
-		/* Receiving new connection request from a server who was connected previously */
-		conn_arr[svr_conn_index].sd = -1;
-		conn_arr[svr_conn_index].secondary_sd = -1;
-		conn_arr[svr_conn_index].state = SVR_CONN_STATE_DOWN;
-	}
 
 	if (conn_arr[svr_conn_index].sd == -1) {
 		if ((phe = gethostbyaddr((char *) &saddr_in.sin_addr, sizeof(saddr_in.sin_addr), AF_INET)) == NULL) {

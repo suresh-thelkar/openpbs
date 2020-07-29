@@ -834,7 +834,6 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 	time_t cur_time;		/* the current time via time() */
 	nspec **ns_arr = NULL;		/* node solution for job */
 	int i;
-	int cmd;
 	int sort_again = DONT_SORT_JOBS;
 	schd_error *err;
 	schd_error *chk_lim_err;
@@ -1093,7 +1092,8 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 				"Bailed out of main job loop after checking to see if %d jobs could run.", (i + 1));
 		}
 
-		if (!end_cycle) {
+/*TODO Need to handle super high priority commands when we move to mainline */
+/* 		if (!end_cycle) {
 			if (second_connection != -1) {
 				char *jid = NULL;
 
@@ -1106,7 +1106,7 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 				if (jid != NULL)
 					free(jid);
 			}
-		}
+		} */
 
 #ifdef NAS /* localmod 030 */
 		if (check_for_cycle_interrupt(0)) {
