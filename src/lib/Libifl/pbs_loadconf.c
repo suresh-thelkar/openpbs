@@ -299,6 +299,11 @@ parse_psi(char *conf_value)
 	}
 	pbs_conf.pbs_num_servers = i;
 
+	for(i = 0; list[i] != NULL; i++) {
+		free(list[i]);
+	}
+	free(list);
+
 	return 0;
 }
 
