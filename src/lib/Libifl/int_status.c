@@ -183,7 +183,7 @@ struct batch_status *
 PBSD_status(int c, int svr_index, int function, char *objid, struct attrl *attrib, char *extend)
 {
 	int rc;
-	struct batch_status *PBSD_status_get(int c, int svr_index, int type);
+	struct batch_status *PBSD_status_get(int c, int svr_index);
 
 	/* send the status request */
 
@@ -196,7 +196,7 @@ PBSD_status(int c, int svr_index, int function, char *objid, struct attrl *attri
 	}
 
 	/* get the status reply */
-	return (PBSD_status_get(c, svr_index, function));
+	return (PBSD_status_get(c, svr_index));
 }
 
 static void
@@ -528,7 +528,7 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
  * @retval NULL on failure
  */
 struct batch_status *
-PBSD_status_get(int c, int svr_index, int type)
+PBSD_status_get(int c, int svr_index)
 {
 	struct brp_cmdstat  *stp; /* pointer to a returned status record */
 	struct batch_status *bsp  = NULL;
@@ -536,6 +536,16 @@ PBSD_status_get(int c, int svr_index, int type)
 	struct batch_reply  *reply;
 	int i;
 	struct attrl *pat;
+	svr_conn_t *svr_conns;
+	int from_sched = 0;
+
+	svr_conns = get_conn_servers();
+	if (svr_conns == NULL)
+		return NULL;
+
+	if ((svr_index != -1) && (svr_conns[svr_index].secondary_sd != -1))
+		from_sched = 1;
+
 	/* read reply from stream into presentation element */
 
 	reply = PBSD_rdrpy(c);
@@ -575,7 +585,7 @@ PBSD_status_get(int c, int svr_index, int type)
 			bsp->next = NULL;
 			rbsp->last = bsp;
 
-			if (type == PBS_BATCH_StatusJob || type == PBS_BATCH_SelStat || type == PBS_BATCH_StatusNode) {
+			if (from_sched) {
 				/*Add server_idx attribute */
 				pat = new_attrl();
 				if (pat == NULL) {
@@ -599,7 +609,7 @@ PBSD_status_get(int c, int svr_index, int type)
 					return NULL;
 				}
 				
-				sprintf(pat->value, "%d", svr_index);
+				snprintf(pat->value, 3, "%d", svr_index);
 				
 				pat->next = bsp->attribs;			
 				bsp->attribs = pat;					
