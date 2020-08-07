@@ -180,10 +180,10 @@ random_srv_conn(svr_conn_t *svr_connections)
  *
  */
 struct batch_status *
-PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend)
+PBSD_status(int c, int svr_index, int function, char *objid, struct attrl *attrib, char *extend)
 {
 	int rc;
-	struct batch_status *PBSD_status_get(int c);
+	struct batch_status *PBSD_status_get(int c, int svr_index);
 
 	/* send the status request */
 
@@ -196,7 +196,7 @@ PBSD_status(int c, int function, char *objid, struct attrl *attrib, char *extend
 	}
 
 	/* get the status reply */
-	return (PBSD_status_get(c));
+	return (PBSD_status_get(c, svr_index));
 }
 
 static void
@@ -438,7 +438,7 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 		if (pbs_client_thread_lock_connection(c) != 0)
 			return NULL;
 
-		if ((next = PBSD_status(c, cmd, id, attrib, extend))) {
+		if ((next = PBSD_status(c, i, cmd, id, attrib, extend))) {
 			if (!ret) {
 				ret = next;
 				cur = next->last;
@@ -508,7 +508,7 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
 	if (pbs_client_thread_lock_connection(c) != 0)
 		return NULL;
 
-	ret = PBSD_status(c, cmd, id, attrib, extend);
+	ret = PBSD_status(c, -1, cmd, id, attrib, extend);
 
 	/* unlock the thread lock and update the thread context data */
 	if (pbs_client_thread_unlock_connection(c) != 0)
@@ -528,13 +528,23 @@ PBSD_status_random(int c, int cmd, char *id, struct attrl *attrib, char *extend,
  * @retval NULL on failure
  */
 struct batch_status *
-PBSD_status_get(int c)
+PBSD_status_get(int c, int svr_index)
 {
 	struct brp_cmdstat  *stp; /* pointer to a returned status record */
 	struct batch_status *bsp  = NULL;
 	struct batch_status *rbsp = NULL;
 	struct batch_reply  *reply;
 	int i;
+	struct attrl *pat;
+	svr_conn_t *svr_conns;
+	int from_sched = 0;
+
+	svr_conns = get_conn_servers();
+	if (svr_conns == NULL)
+		return NULL;
+
+	if ((svr_index != -1) && (svr_conns[svr_index].secondary_sd != -1))
+		from_sched = 1;
 
 	/* read reply from stream into presentation element */
 
@@ -574,6 +584,37 @@ PBSD_status_get(int c)
 				stp->brp_attrl = 0;
 			bsp->next = NULL;
 			rbsp->last = bsp;
+
+			if (from_sched) {
+				/*Add server_idx attribute */
+				pat = new_attrl();
+				if (pat == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					return NULL;
+				}
+				pat->name = strdup(ATTR_server_index);
+				if (pat->name == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					return NULL;
+				}
+
+				/* Memory of 3 bytes because we at most can have 99 servers.  So to represent this in string
+				we need an array of len 2 for server index + 1 for NULL char */
+				pat->value = malloc(3);
+				if (pat->value == NULL) {
+					pbs_errno = PBSE_SYSTEM;
+					free_attrl(pat);
+					free(pat->name);
+					return NULL;
+				}
+				
+				snprintf(pat->value, 3, "%d", svr_index);
+				
+				pat->next = bsp->attribs;			
+				bsp->attribs = pat;					
+			}
+
 			stp = stp->brp_stlink;
 		}
 		if (pbs_errno) {

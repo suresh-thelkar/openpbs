@@ -1217,8 +1217,12 @@ query_job(struct batch_status *job, server_info *sinfo, schd_error *err)
 			resresv->job->NAS_pri = resresv->job->priority;
 #endif /* localmod 045 */
 		}
-		else if (!strcmp(attrp->name, ATTR_server)) {
-			resresv->svr_index = get_svr_index(attrp->value);
+		else if (!strcmp(attrp->name, ATTR_server_index)) {
+			count = strtol(attrp->value, &endp, 10);
+			if (*endp == '\0')
+				resresv->svr_index = count;
+			else
+				resresv->svr_index = -1;
 			if (resresv->svr_index == -1) {
 				free_resource_resv(resresv);
 				return NULL;

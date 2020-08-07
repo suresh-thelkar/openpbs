@@ -158,6 +158,7 @@ extern "C" {
 #define ATTR_state	"job_state"
 #define ATTR_queue	"queue"
 #define ATTR_server	"server"
+#define ATTR_server_index "server_index"
 #define ATTR_maxrun	"max_running"
 #define ATTR_max_run		"max_run"
 #define ATTR_max_run_res	"max_run_res"
@@ -574,7 +575,6 @@ typedef struct svr_conn {
 	int state;                  	/* Connection state */
 	time_t state_change_time;   	/* Connnetion state change time */
 	time_t last_used_time;      	/* Last used time for the connection */
-	char host_name[256];        	/* hostname of the connection coming from */
 	char svr_id[MAX_SVR_ID];    	/* svr_id of the form server_name:port */
 	char name[PBS_MAXHOSTNAME];	/* server name */
 	int port;						/* server port */

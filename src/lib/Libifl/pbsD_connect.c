@@ -931,7 +931,6 @@ __pbs_disconnect(int connect)
 		for (i = 0; i < get_num_servers(); i++) {
 			if (svr_conns[i].sd == connect) {
 				svr_conns[i].sd = -1;
-				svr_conns[i].host_name[0] = '\0';
 				svr_conns[i].secondary_sd = -1;
 				svr_conns[i].state = SVR_CONN_STATE_DOWN;
 				svr_conns[i].state_change_time = time(NULL);
