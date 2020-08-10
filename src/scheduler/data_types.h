@@ -1299,6 +1299,20 @@ struct resresv_filter {
 	resource_resv *job;
 	schd_error *err;		/* reason why set can not run*/
 };
+
+typedef struct sched_cmd_t {
+	int cmd;
+	char *value;
+	int sd;
+	int seccondary_sd;
+	int index;
+} sched_cmd_t;
+
+typedef struct sock_index_t {
+	int sock;
+	int index;
+} sock_index_t;
+
 #ifdef	__cplusplus
 }
 #endif
