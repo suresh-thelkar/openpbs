@@ -1527,6 +1527,33 @@ send_cycle_end(int socket)
 
 }
 
+int
+compare_sched_cmd(sched_cmd_t *cmd_cache, sched_cmd_t *new_cmd)
+{
+	if (new_cmd->cmd == SCH_CONFIGURE || cmd_cache->cmd == SCH_CONFIGURE ||
+		new_cmd->cmd == SCH_SCHEDULE_RESTART_CYCLE )
+			return 0;
+	
+	if (new_cmd->cmd == SCH_SCHEDULE_AJOB || cmd_cache->cmd != SCH_SCHEDULE_AJOB) {
+		return 1;
+	} else if (cmd_cache->cmd == SCH_SCHEDULE_AJOB || new_cmd->cmd != SCH_SCHEDULE_AJOB) {
+		cmd_cache->cmd = new_cmd->cmd;
+		if (cmd_cache->value == NULL)
+			cmd_cache->value = NULL;		
+	}
+
+	if (cmd_cache && new_cmd) {
+		if (cmd_cache->value == NULL && new_cmd->value == NULL) {
+			if (cmd_cache->cmd == new_cmd->cmd)
+				return 1;
+		} else {
+			if (cmd_cache->cmd == new_cmd->cmd && !strcmp(cmd_cache->value, new_cmd->value))
+				return 1;
+		}
+	}
+	return 0;
+}
+
 /**
  * @brief
  *		schedule_wrapper - Wrapper function to call schedule which handles both Multiple Servers
@@ -1554,7 +1581,12 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 	int socks_notify_arr_size = 0;
 	int sched_cmds_arr_size = 0;
 	int i;
-	int num_cfg_svrs = get_num_servers();
+	int num_cfg_svrs;
+
+	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
+		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
+
+	num_cfg_svrs  = get_num_servers();
 
 	svr_conns = get_conn_servers();
 	if (svr_conns == NULL)
@@ -1585,20 +1617,21 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 				socks_notify_arr_size++;
 				if (sched_cmds_arr_size == 0) {
 					sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
-					//if (cmd == SCH_SCHEDULE_AJOB)
-						sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
-					sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
+					sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
+					sched_cmds_arr[sched_cmds_arr_size].seccondary_sd =tmp_sock;
 					sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
 					sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
 					sched_cmds_arr_size++;
 				} else {
 					int i;
 					for (i = 0; i < sched_cmds_arr_size; i++) {
-						if (cmd == sched_cmds_arr[i].cmd)
+						sched_cmd_t tmp_cmd;
+						tmp_cmd.cmd = cmd;
+						tmp_cmd.value = runjobid;
+						if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
 							break;
 						sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
-						//if (cmd == SCH_SCHEDULE_AJOB)
-							sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
+						sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
 						sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
 						sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
 						sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
@@ -1608,8 +1641,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			}
 		}
 	}
-	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
-		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
 
 	for (i = 0; i < sched_cmds_arr_size; i++) {
 		ifl_sock = sched_cmds_arr[i].sd;
