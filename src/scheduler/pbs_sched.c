@@ -1530,16 +1530,20 @@ send_cycle_end(int socket)
 int
 compare_sched_cmd(sched_cmd_t *cmd_cache, sched_cmd_t *new_cmd)
 {
-	if (new_cmd->cmd == SCH_CONFIGURE || cmd_cache->cmd == SCH_CONFIGURE ||
-		new_cmd->cmd == SCH_SCHEDULE_RESTART_CYCLE )
-			return 0;
-	
-	if (new_cmd->cmd == SCH_SCHEDULE_AJOB || cmd_cache->cmd != SCH_SCHEDULE_AJOB) {
+	if (new_cmd->cmd == SCH_SCHEDULE_RESTART_CYCLE )
 		return 1;
-	} else if (cmd_cache->cmd == SCH_SCHEDULE_AJOB || new_cmd->cmd != SCH_SCHEDULE_AJOB) {
+	
+	if (new_cmd->cmd == SCH_SCHEDULE_AJOB &&
+		(cmd_cache->cmd != SCH_SCHEDULE_AJOB && cmd_cache->cmd != SCH_CONFIGURE &&
+		 cmd_cache->cmd != SCH_RULESET && cmd_cache->cmd != SCH_ERROR)) {
+		return 1;
+	} else if (cmd_cache->cmd == SCH_SCHEDULE_AJOB &&
+		(new_cmd->cmd != SCH_SCHEDULE_AJOB && new_cmd->cmd != SCH_CONFIGURE &&
+		 new_cmd->cmd != SCH_RULESET && new_cmd->cmd != SCH_ERROR)) {
 		cmd_cache->cmd = new_cmd->cmd;
 		if (cmd_cache->value == NULL)
-			cmd_cache->value = NULL;		
+			cmd_cache->value = NULL;	
+		return 1;	
 	}
 
 	if (cmd_cache && new_cmd) {
@@ -1629,6 +1633,8 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 						tmp_cmd.value = runjobid;
 						if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
 							break;
+					}
+					if ( i == sched_cmds_arr_size) {
 						sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
 						sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
 						sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
@@ -1679,7 +1685,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 
 			if (sched_cmds_arr[i].cmd == SCH_QUIT)
 				return 1;
-
 			close_server_conn(sched_cmds_arr[i].index);
 		} 
 
@@ -1699,7 +1704,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 
 	free(socks_notify_arr);
 	free(sched_cmds_arr);
-
 
 	return 0;
 }
