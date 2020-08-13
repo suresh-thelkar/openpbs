@@ -1570,7 +1570,6 @@ static int
 schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 {
 	int svr_inst_idx;
-	/* int sock_to_check  = -1; */
 	int ifl_sock = -1;
 	int cmd;
 	int alarm_time = 0;
