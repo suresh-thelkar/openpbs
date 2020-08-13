@@ -311,15 +311,15 @@ pbs_strcat(char **strbuf, int *ssize, char *str)
  * @brief special purpose strcpy for chain copying strings
  *        primary difference with normal strcpy is that it
  *        returns the destination buffer position just past
- *        the copied data. Thus the next string can be just 
- *        added to the returned pointer.  
+ *        the copied data. Thus the next string can be just
+ *        added to the returned pointer.
  *
  * @param[in] dest - pointer to the destination buffer
  * @param[in] src  - pointer to the source buffer
  *
  * @return char *
  * @retval pointer to the end of the resulting string
- *	
+ *
  * @note: Caller needs to ensure space and non-NULL pointers
  *        This function is created for performance so does not
  *        verify any paramaters
@@ -2194,7 +2194,7 @@ crc_file(char *filepath)
  *
  * @return int
  */
-int 
+int
 get_msvr_mode(void)
 {
 	return 0;
@@ -2226,21 +2226,22 @@ int
 parse_pbs_name_port(char *svr_id, char *svrname, int *svrport)
 {
 	char *ptr = NULL;
-	char *endptr;
-	long port = PBS_BATCH_SERVICE_PORT;
 
-	if (svr_id == NULL || svrname == NULL || svrport == NULL)
+	if (svr_id == NULL || svrname == NULL)
 		return 1;
 
 	ptr = strchr(svr_id, ':');
 	if (ptr != NULL) {
+		int port;
+		char *endptr;
+
 		*ptr = '\0';
 		port = strtol(ptr + 1, &endptr, 10);
 		if (*endptr != '\0')
 			return 1;
+		*svrport = port;
 	}
-	*svrport = (int) port;
-	snprintf(svrname, PBS_MAXHOSTNAME, "%s", svr_id);
+	strcpy(svrname, svr_id);
 
 	if (ptr != NULL)
 		*ptr = ':';
