@@ -1615,34 +1615,26 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			if (ret != 1)
 				close_server_conn(svr_inst_idx);
 			else {
+				int i;
 				socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
 				socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
 				socks_notify_arr_size++;
-				if (sched_cmds_arr_size == 0) {
+				
+				for (i = 0; i < sched_cmds_arr_size; i++) {
+					sched_cmd_t tmp_cmd;
+					tmp_cmd.cmd = cmd;
+					tmp_cmd.value = runjobid;
+					if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
+						break;
+				}
+				if ( i == sched_cmds_arr_size) {
 					sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
 					sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
-					sched_cmds_arr[sched_cmds_arr_size].seccondary_sd =tmp_sock;
+					sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
 					sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
 					sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
 					sched_cmds_arr_size++;
-				} else {
-					int i;
-					for (i = 0; i < sched_cmds_arr_size; i++) {
-						sched_cmd_t tmp_cmd;
-						tmp_cmd.cmd = cmd;
-						tmp_cmd.value = runjobid;
-						if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
-							break;
-					}
-					if ( i == sched_cmds_arr_size) {
-						sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
-						sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
-						sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
-						sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
-						sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
-						sched_cmds_arr_size++;
-					}
-				} 
+				}
 			}
 		}
 	}
