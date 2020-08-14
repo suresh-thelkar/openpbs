@@ -1527,6 +1527,25 @@ send_cycle_end(int socket)
 
 }
 
+/**
+ *
+ * @brief
+ *		Compares two sched commands(command in cache vs new command coming from socket) and finds out
+ *	        whether they are identical or not. Also replaces command in cache with the new command if new command
+ *	        is superset.
+ *	        Since this is separate function more filtering criteria for Sched commands can be easily added. For example
+ *              if a new sched command is introduced or priority of an existing command has changed this function has to be
+ *              revisited.
+ *
+ * @param[in]	cmd_cache	-	command in Sched's cache
+ * @param[in]	new_cmd		-	command from socket buffer
+ *
+ *
+ * @return	int
+ * @retval	1	-	if both command are duplicate
+ * @reval	0	-	if not duplicate
+ *
+ */
 int
 compare_sched_cmd(sched_cmd_t *cmd_cache, sched_cmd_t *new_cmd)
 {
@@ -1585,6 +1604,7 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 	int sched_cmds_arr_size = 0;
 	int i;
 	int num_cfg_svrs;
+	char tmp_str[100];
 
 	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
 		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
@@ -1607,6 +1627,7 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		die(0);	
 	}
 
+	sprintf(log_buffer, "Sched commands before filtering:");
 	for (svr_inst_idx = 0; svr_inst_idx < num_cfg_svrs; svr_inst_idx++) { 
 		int tmp_sock = svr_conns[svr_inst_idx].secondary_sd;
 		if (tmp_sock != -1 && FD_ISSET(tmp_sock, read_fdset)) {
@@ -1615,11 +1636,12 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			if (ret != 1)
 				close_server_conn(svr_inst_idx);
 			else {
-				int i;
+				sprintf(tmp_str, "instance = %d cmd = %d jobid/value = %s,", svr_inst_idx, cmd, runjobid);
+				strcat(log_buffer, tmp_str);
 				socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
 				socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
 				socks_notify_arr_size++;
-				
+
 				for (i = 0; i < sched_cmds_arr_size; i++) {
 					sched_cmd_t tmp_cmd;
 					tmp_cmd.cmd = cmd;
@@ -1638,11 +1660,17 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			}
 		}
 	}
+	sys_printf(log_buffer);
+
+	sprintf(log_buffer, "Sched commands after filtering:");
 
 	for (i = 0; i < sched_cmds_arr_size; i++) {
 		ifl_sock = sched_cmds_arr[i].sd;
 		int sched_ret;
 		static int num_svrs_updated = 0;
+
+		sprintf(tmp_str, " cmd = %d jobid/value = %s,", cmd, runjobid);
+		strcat(log_buffer, tmp_str);
 
 		if (num_svrs_updated < num_cfg_svrs) {
 			/* update sched object attributes on server */
@@ -1685,6 +1713,8 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			sched_cmds_arr[i].value = NULL;
 		}
 	}
+
+	sys_printf(log_buffer);
 
 	for (i =0; i < socks_notify_arr_size; i++) {
 		if (send_cycle_end(socks_notify_arr[i].sock) == -1)

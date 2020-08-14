@@ -103,6 +103,18 @@ typedef struct pbs_sched {
 	short newobj;
 } pbs_sched;
 
+typedef struct sched_cmd_t {
+	int cmd;
+	char *value;
+	int sd;
+	int seccondary_sd;
+	int index;
+} sched_cmd_t;
+
+typedef struct sock_index_t {
+	int sock;
+	int index;
+} sock_index_t;
 
 extern pbs_sched *dflt_scheduler;
 extern	pbs_list_head	svr_allscheds;
