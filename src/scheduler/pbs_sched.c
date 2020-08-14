@@ -1660,7 +1660,8 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			}
 		}
 	}
-	sys_printf(log_buffer);
+	/* sys_printf(log_buffer); */
+	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
 
 	sprintf(log_buffer, "Sched commands after filtering:");
 
@@ -1714,7 +1715,8 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		}
 	}
 
-	sys_printf(log_buffer);
+	/* sys_printf(log_buffer); */
+	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
 
 	for (i =0; i < socks_notify_arr_size; i++) {
 		if (send_cycle_end(socks_notify_arr[i].sock) == -1)
