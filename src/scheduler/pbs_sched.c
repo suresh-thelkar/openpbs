@@ -1403,7 +1403,9 @@ main(int argc, char *argv[])
 			 * we should go to the next block of code.
 			 */
 			if (accept_svr_conn(&max_sd) != 0)
-				die(0);
+				/* die(0); */
+				/* don't die just because of one server's mis-configuration */
+				continue;
 		}
 
 		if (schedule_wrapper(&read_fdset, opt_no_restart) == 1)
