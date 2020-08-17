@@ -122,6 +122,7 @@
 #include "pbs_python.h"
 #include "globals.h"
 #include "libpbs.h"
+#include "pbs_ifl.h"
 
 #ifdef NAS
 #include "site_code.h"
@@ -1092,21 +1093,34 @@ main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rerr)
 				"Bailed out of main job loop after checking to see if %d jobs could run.", (i + 1));
 		}
 
-/*TODO Need to handle super high priority commands when we move to mainline */
-/* 		if (!end_cycle) {
-			if (second_connection != -1) {
-				char *jid = NULL;
+		if (!end_cycle) {
+			int svr_inst_idx;
+			int cmd;
+			int ret;
+			svr_conn_t *svr_conns = NULL;
+			char *jid = NULL;
+			
+			svr_conns = get_conn_servers();
+			if (svr_conns == NULL)
+				end_cycle = 1;
 
-				if ((get_sched_cmd_noblk(second_connection, &cmd, &jid) == 1) &&
-					(cmd == SCH_SCHEDULE_RESTART_CYCLE)) {
-					log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING,
-						njob->name, "Leaving scheduling cycle as requested by server.");
-					end_cycle = 1;
+			for (svr_inst_idx = 0; svr_inst_idx < get_num_servers(); svr_inst_idx++) {
+				ret = get_sched_cmd_noblk(svr_conns[svr_inst_idx].secondary_sd, &cmd, &jid);
+
+				if (ret == 1) {
+					if (cmd != SCH_SCHEDULE_RESTART_CYCLE) {
+						svr_conns[svr_inst_idx].sched_cmd = cmd;
+						svr_conns[svr_inst_idx].sched_cmd_value = jid;
+					} else {
+						log_event(PBSEVENT_SCHED, PBS_EVENTCLASS_JOB, LOG_WARNING,
+							njob->name, "Leaving scheduling cycle as requested by server.");
+						end_cycle = 1;
+						if (jid != NULL)
+							free(jid);
+					}
 				}
-				if (jid != NULL)
-					free(jid);
 			}
-		} */
+		}
 
 #ifdef NAS /* localmod 030 */
 		if (check_for_cycle_interrupt(0)) {

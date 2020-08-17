@@ -40,6 +40,7 @@
 
 
 /* server to scheduler commands: */
+#define SCH_INVALID_SCHED_CMD -2
 #define SCH_ERROR         -1
 #define SCH_SCHEDULE_NULL  0
 #define SCH_SCHEDULE_NEW   1		/* New job queued or eligible	*/

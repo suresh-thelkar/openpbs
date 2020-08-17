@@ -441,6 +441,7 @@ get_conn_servers(void)
 			conn_arr[i].sd = -1;
 			conn_arr[i].secondary_sd = -1;
 			conn_arr[i].state = SVR_CONN_STATE_DOWN;
+			conn_arr[i].sched_cmd = -2; /* -1 is also a valid sched command */
 		}
 
 		pthread_setspecific(psi_key, conn_arr);

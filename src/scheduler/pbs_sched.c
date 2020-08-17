@@ -1417,6 +1417,8 @@ main(int argc, char *argv[])
 	if (svr_conns != NULL) {
 		for (svr_inst_idx = 0; svr_inst_idx < get_num_servers(); svr_inst_idx++) {
 			close_server_conn(svr_inst_idx);
+			if (svr_conns[svr_inst_idx].sched_cmd_value != NULL)
+				free(svr_conns[svr_inst_idx].sched_cmd_value);
 		}
 		free(svr_conns);
 	}
@@ -1632,34 +1634,46 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 	sprintf(log_buffer, "Sched commands before filtering:");
 	for (svr_inst_idx = 0; svr_inst_idx < num_cfg_svrs; svr_inst_idx++) { 
 		int tmp_sock = svr_conns[svr_inst_idx].secondary_sd;
-		if (tmp_sock != -1 && FD_ISSET(tmp_sock, read_fdset)) {
+
+		if (svr_conns[svr_inst_idx].sched_cmd != SCH_INVALID_SCHED_CMD) {
+			cmd = svr_conns[svr_inst_idx].sched_cmd;
+			runjobid = svr_conns[svr_inst_idx].sched_cmd_value;
+			/* reset the command and its value after reading */
+			 svr_conns[svr_inst_idx].sched_cmd = SCH_INVALID_SCHED_CMD;
+			 if (runjobid != NULL) {
+				 free(runjobid);
+				 svr_conns[svr_inst_idx].sched_cmd_value = NULL;
+			 }
+		} else if (tmp_sock != -1 && FD_ISSET(tmp_sock, read_fdset)) {
 			int ret;
 			ret = get_sched_cmd(tmp_sock, &cmd, &runjobid);
-			if (ret != 1)
+			if (ret != 1) {
 				close_server_conn(svr_inst_idx);
-			else {
-				sprintf(tmp_str, "instance = %d cmd = %d jobid/value = %s,", svr_inst_idx, cmd, runjobid);
-				strcat(log_buffer, tmp_str);
-				socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
-				socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
-				socks_notify_arr_size++;
-
-				for (i = 0; i < sched_cmds_arr_size; i++) {
-					sched_cmd_t tmp_cmd;
-					tmp_cmd.cmd = cmd;
-					tmp_cmd.value = runjobid;
-					if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
-						break;
-				}
-				if ( i == sched_cmds_arr_size) {
-					sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
-					sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
-					sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
-					sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
-					sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
-					sched_cmds_arr_size++;
-				}
+				continue;
 			}
+		} else
+			continue;
+
+		sprintf(tmp_str, "instance = %d cmd = %d jobid/value = %s,", svr_inst_idx, cmd, runjobid);
+		strcat(log_buffer, tmp_str);
+		socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
+		socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
+		socks_notify_arr_size++;
+
+		for (i = 0; i < sched_cmds_arr_size; i++) {
+			sched_cmd_t tmp_cmd;
+			tmp_cmd.cmd = cmd;
+			tmp_cmd.value = runjobid;
+			if (compare_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
+				break;
+		}
+		if ( i == sched_cmds_arr_size) {
+			sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
+			sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
+			sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
+			sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
+			sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
+			sched_cmds_arr_size++;
 		}
 	}
 	/* sys_printf(log_buffer); */
