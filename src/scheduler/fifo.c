@@ -2465,6 +2465,30 @@ next_job(status *policy, server_info *sinfo, int flag)
 	return rjob;
 }
 
+int
+pbs_manager_aggregate(int c, int command, int objtype, char *objname,
+		struct attropl *attrib, char *extend)
+{
+	int rc;
+	int agg_rc = 0;
+	int i;
+	svr_conn_t *svr_connections = get_conn_servers();
+
+	if (!svr_connections) {
+		pbs_errno = PBSE_SYSTEM;
+		return pbs_errno;
+	}
+
+	for (i = 0; i < get_num_servers(); i++) {
+		c = svr_connections[i].sd;
+		rc = pbs_manager(c, command, objtype, objname, attrib, extend);
+		if (rc)
+			agg_rc = rc;
+	}
+
+	return agg_rc;
+}
+
 /**
  * @brief	Initialize sc_attrs
  */
@@ -2743,7 +2767,7 @@ parse_sched_obj(struct batch_status *status, int connector)
 				patt->value = "0";
 				patt->next = NULL;
 
-				err = pbs_manager(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
+				err = pbs_manager_aggregate(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
 				free(attribs);
 				if (err) {
 					log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
@@ -2825,7 +2849,7 @@ parse_sched_obj(struct batch_status *status, int connector)
 			patt->name = ATTR_scheduling;
 			patt->value = "0";
 			patt->next = NULL;
-			err = pbs_manager(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
+			err = pbs_manager_aggregate(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
 			free(attribs);
 			if (err) {
 				log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
@@ -2855,7 +2879,7 @@ parse_sched_obj(struct batch_status *status, int connector)
 		}
 		patt->value[0] = '\0';
 		patt->next = NULL;
-		err = pbs_manager(connector, MGR_CMD_UNSET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
+		err = pbs_manager_aggregate(connector, MGR_CMD_UNSET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
 		free(attribs->value);
 		free(attribs);
 		if (err) {
@@ -2943,7 +2967,7 @@ update_svr_schedobj(int connector, int cmd, int alarm_time)
 	}
 	patt->next = NULL;
 
-	pbs_manager(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
+	pbs_manager_aggregate(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
 
 	free(attribs);
 	return 1;

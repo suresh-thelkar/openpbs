@@ -116,6 +116,7 @@
 #include	"pbs_sched.h"
 #include 	"misc.h"
 #include	"pbs_internal.h"
+#include	"data_types.h"
 
 int		server_sock;
 int		second_connection = -1;
@@ -1407,9 +1408,8 @@ main(int argc, char *argv[])
 	svr_conns = get_conn_servers();
 	/* Make sure that we close all server connections */
 	if (svr_conns != NULL) {
-		for (svr_inst_idx = 0; svr_inst_idx < get_num_servers(); svr_inst_idx++) {
+		for (svr_inst_idx = 0; svr_inst_idx < get_num_servers(); svr_inst_idx++)
 			close_server_conn(svr_inst_idx);
-		}
 		free(svr_conns);
 	}
 	(void)destroy_connection(server_sock);
@@ -1526,6 +1526,56 @@ send_cycle_end(int socket)
 }
 
 /**
+ *
+ * @brief
+ *		Compares two sched commands(command in cache vs new command coming from socket) and finds out
+ *	        whether they are identical or not. Also replaces command in cache with the new command if new command
+ *	        is superset.
+ *	        Since this is a separate function more filtering criteria for Sched commands can be easily added. For example
+ *              if a new sched command is introduced or priority of an existing command has changed this function has to be
+ *              revisited.
+ *
+ * @param[in]	cmd_cache	-	command in Sched's cache
+ * @param[in]	new_cmd		-	command from socket buffer
+ *
+ *
+ * @return	int
+ * @retval	1	-	if both command are duplicate
+ * @reval	0	-	if not duplicate
+ *
+ */
+int
+compare_modify_sched_cmd(sched_cmd_t *cmd_cache, sched_cmd_t *new_cmd)
+{
+	if (new_cmd->cmd == SCH_SCHEDULE_RESTART_CYCLE )
+		return 1;
+	
+	if (new_cmd->cmd == SCH_SCHEDULE_AJOB &&
+		(cmd_cache->cmd != SCH_SCHEDULE_AJOB && cmd_cache->cmd != SCH_CONFIGURE &&
+		 cmd_cache->cmd != SCH_RULESET && cmd_cache->cmd != SCH_ERROR)) {
+		return 1;
+	} else if (cmd_cache->cmd == SCH_SCHEDULE_AJOB &&
+		(new_cmd->cmd != SCH_SCHEDULE_AJOB && new_cmd->cmd != SCH_CONFIGURE &&
+		 new_cmd->cmd != SCH_RULESET && new_cmd->cmd != SCH_ERROR)) {
+		cmd_cache->cmd = new_cmd->cmd;
+		if (cmd_cache->value == NULL)
+			cmd_cache->value = NULL;	
+		return 1;	
+	}
+
+	if (cmd_cache && new_cmd) {
+		if (cmd_cache->value == NULL && new_cmd->value == NULL) {
+			if (cmd_cache->cmd == new_cmd->cmd)
+				return 1;
+		} else {
+			if (cmd_cache->cmd == new_cmd->cmd && !strcmp(cmd_cache->value, new_cmd->value))
+				return 1;
+		}
+	}
+	return 0;
+}
+
+/**
  * @brief
  *		schedule_wrapper - Wrapper function to call schedule which handles both Multiple Servers
  *				   and single server.
@@ -1541,89 +1591,143 @@ static int
 schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 {
 	int svr_inst_idx;
-	int sock_to_check  = -1;
 	int ifl_sock = -1;
 	int cmd;
 	int alarm_time = 0;
 	char *runjobid = NULL;
 	svr_conn_t *svr_conns = NULL;
-	int num_cfg_svrs = get_num_servers();
+	sched_cmd_t *sched_cmds_arr = NULL;
+	sock_index_t *socks_notify_arr = NULL;
+	int socks_notify_arr_size = 0;
+	int sched_cmds_arr_size = 0;
+	int i;
+	int num_cfg_svrs;
+	char tmp_str[100];
+
+	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
+		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
+
+	num_cfg_svrs  = get_num_servers();
 
 	svr_conns = get_conn_servers();
 	if (svr_conns == NULL)
 		die(0);
 
-	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
-		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
+	sched_cmds_arr = malloc(num_cfg_svrs * sizeof(sched_cmd_t));
+	if (sched_cmds_arr == NULL) {
+		log_err(errno, __func__, MEM_ERR_MSG);
+		die(0);
+	}
 
-	for (svr_inst_idx = 0; svr_inst_idx < num_cfg_svrs; svr_inst_idx++) {
-		sock_to_check = svr_conns[svr_inst_idx].secondary_sd;
-		ifl_sock = svr_conns[svr_inst_idx].sd;
-		second_connection = svr_conns[svr_inst_idx].secondary_sd;
+	socks_notify_arr = malloc(num_cfg_svrs * sizeof(sock_index_t));
+	if (socks_notify_arr == NULL) {
+		log_err(errno, __func__, MEM_ERR_MSG);
+		die(0);	
+	}
 
-		if (sock_to_check != -1 && second_connection != -1 && FD_ISSET(sock_to_check, read_fdset)) {
+	sprintf(log_buffer, "Sched commands before filtering:");
+	for (svr_inst_idx = 0; svr_inst_idx < num_cfg_svrs; svr_inst_idx++) { 
+		int tmp_sock = svr_conns[svr_inst_idx].secondary_sd;
+
+		if (tmp_sock != -1 && FD_ISSET(tmp_sock, read_fdset)) {
 			int ret;
-			ret = get_sched_cmd(sock_to_check, &cmd, &runjobid);
+			ret = get_sched_cmd(tmp_sock, &cmd, &runjobid);
 			if (ret != 1) {
 				close_server_conn(svr_inst_idx);
-				log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
-						"get_sched_cmd failed, errno=%d in function %s. "
-						"One  of the reasons includes server might have shutdown",
-						errno, __func__);
-			} else {
-				int sched_ret;
-				static int num_svrs_updated = 0;
+				continue;
+			}
+		} else
+			continue;
 
-				if (num_svrs_updated < num_cfg_svrs) {
-					/* update sched object attributes on server */
-					if (update_svr_schedobj(ifl_sock, cmd, alarm_time) == 0) {
-						close_server_conn(svr_inst_idx);
-						continue;
-					}
-					num_svrs_updated++;
-				}
+		sprintf(tmp_str, "instance = %d cmd = %d jobid/value = %s,", svr_inst_idx, cmd, runjobid);
+		strcat(log_buffer, tmp_str);
+		socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
+		socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
+		socks_notify_arr_size++;
 
-				/* Keep track of time to use in SIGSEGV handler */
+		for (i = 0; i < sched_cmds_arr_size; i++) {
+			sched_cmd_t tmp_cmd;
+			tmp_cmd.cmd = cmd;
+			tmp_cmd.value = runjobid;
+			if (compare_modify_sched_cmd(&sched_cmds_arr[i], &tmp_cmd) == 1)
+				break;
+		}
+
+		if ( i == sched_cmds_arr_size) {
+			sched_cmds_arr[sched_cmds_arr_size].cmd = cmd;
+			sched_cmds_arr[sched_cmds_arr_size].value = runjobid;
+			sched_cmds_arr[sched_cmds_arr_size].seccondary_sd = svr_conns[svr_inst_idx].secondary_sd;
+			sched_cmds_arr[sched_cmds_arr_size].sd = svr_conns[svr_inst_idx].sd;
+			sched_cmds_arr[sched_cmds_arr_size].index = svr_inst_idx;
+			sched_cmds_arr_size++;
+		}
+	}
+
+	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
+
+	sprintf(log_buffer, "Sched commands after filtering:");
+	for (i = 0; i < sched_cmds_arr_size; i++) {
+		ifl_sock = sched_cmds_arr[i].sd;
+		int sched_ret;
+		static int num_svrs_updated = 0;
+
+		sprintf(tmp_str, " cmd = %d jobid/value = %s,", cmd, runjobid);
+		strcat(log_buffer, tmp_str);
+
+		if (num_svrs_updated < num_cfg_svrs) {
+			/* update sched object attributes on server */
+			if (update_svr_schedobj(ifl_sock,  sched_cmds_arr[i].cmd, alarm_time) == 0) {
+				close_server_conn(sched_cmds_arr[i].index);
+				continue;
+			}
+			num_svrs_updated++;
+		}
+
+		/* Keep track of time to use in SIGSEGV handler */
 #ifdef NAS /* localmod 031 */
-				now = time(NULL);
-				if (!opt_no_restart)
-					segv_last_time = now;
-				{
-					strftime(log_buffer, sizeof(log_buffer),
-						"%Y-%m-%d %H:%M:%S", localtime(&now));
-					printf("%s Scheduler received command %d\n", log_buffer, cmd);
-				}
+		now = time(NULL);
+		if (!opt_no_restart)
+			segv_last_time = now;
+		{
+			strftime(log_buffer, sizeof(log_buffer),
+				"%Y-%m-%d %H:%M:%S", localtime(&now));
+			printf("%s Scheduler received command %d\n", log_buffer, cmd);
+		}
 #else
-				if (!opt_no_restart)
-					segv_last_time = time(NULL);
+		if (!opt_no_restart)
+			segv_last_time = time(NULL);
 
-				DBPRT(("Scheduler received command %d\n", cmd));
+		DBPRT(("Scheduler received command %d\n", cmd));
 #endif /* localmod 031 */
 
-				/* magic happens here */
-				if ((sched_ret = schedule(cmd, ifl_sock, runjobid)) == 1) {
-					if (sigprocmask(SIG_SETMASK, &oldsigs, NULL) == -1)
-						log_err(errno, __func__, "sigprocmask(SIG_SETMASK)");
+		/* magic happens here */
+		if ((sched_ret = schedule(sched_cmds_arr[i].cmd, ifl_sock, sched_cmds_arr[i].value)) == 1) {
+			if (sigprocmask(SIG_SETMASK, &oldsigs, NULL) == -1)
+				log_err(errno, __func__, "sigprocmask(SIG_SETMASK)");
 
-					if (cmd == SCH_QUIT)
-						return 1;
+			if (sched_cmds_arr[i].cmd == SCH_QUIT)
+				return 1;
+			close_server_conn(sched_cmds_arr[i].index);
+		} 
 
-					close_server_conn(svr_inst_idx);
-				} else {	/* Successful cycle */
-					if (send_cycle_end(second_connection) == -1)
-						close_server_conn(svr_inst_idx);
-				}
-
-				if (runjobid != NULL) {
-					free(runjobid);
-					runjobid = NULL;
-				}
-			}
+		if (sched_cmds_arr[i].value != NULL) {
+			free(sched_cmds_arr[i].value);
+			sched_cmds_arr[i].value = NULL;
 		}
+	}
+
+	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
+
+	for (i =0; i < socks_notify_arr_size; i++) {
+		if (send_cycle_end(socks_notify_arr[i].sock) == -1)
+			close_server_conn(socks_notify_arr[i].index);	
 	}
 
 	if (sigprocmask(SIG_SETMASK, &oldsigs, NULL) == -1)
 		log_err(errno, __func__, "sigprocmask(SIG_SETMASK)");
+
+	free(socks_notify_arr);
+	free(sched_cmds_arr);
 
 	return 0;
 }
