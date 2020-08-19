@@ -475,11 +475,6 @@ restart(int sig)
 			die(0);
 		}
 
-		for (i = 0; i < num_conf_svrs; i++) {
-			if (pbs_conf.psi[i].name != NULL)
-				addclient(pbs_conf.psi[i].name);
-		}
-
 		if (num_conf_svrs > num_conf_svrs_bfore) {
 			conn_arr = pthread_getspecific(psi_key);
 			if (conn_arr != NULL) {
@@ -495,6 +490,7 @@ restart(int sig)
 				conn_arr[i].sd = -1;
 				conn_arr[i].secondary_sd = -1;
 				conn_arr[i].state = SVR_CONN_STATE_DOWN;
+				addclient(pbs_conf.psi[i].name);
 			}
 			pthread_setspecific(psi_key, conn_arr);
 		}
@@ -1401,8 +1397,7 @@ main(int argc, char *argv[])
 			 * by the time control reaches here. So we cannot use continue after accept_svr_conn.
 			 * we should go to the next block of code.
 			 */
-			if (accept_svr_conn(&max_sd) != 0)
-				die(0);
+			accept_svr_conn(&max_sd);
 		}
 
 		if (schedule_wrapper(&read_fdset, opt_no_restart) == 1)
@@ -1463,7 +1458,7 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		return -1;
 	}
 
-	svr_conn_index = get_svr_index(svrname);
+	svr_conn_index = get_svr_index(svrname, port);
 	if (svr_conn_index == -1 || svr_conn_index >= get_num_servers()) {
 		log_event(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__, "Unknown server");
 		return -1;
@@ -1483,10 +1478,14 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 
 	if (conn_arr[svr_conn_index].sd == -1) {
 		conn_arr[svr_conn_index].sd = sock;
-	} else {
+	} else if (conn_arr[svr_conn_index].secondary_sd == -1) {
 		conn_arr[svr_conn_index].secondary_sd = sock;
 		conn_arr[svr_conn_index].state = SVR_CONN_STATE_CONNECTED;
 		FD_SET(sock, &master_fdset);
+	} else {
+		log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
+			"Duplicate Server entry server name = %s, port = %d", svrname, port);
+		return -1;
 	}
 
 	return 0;
