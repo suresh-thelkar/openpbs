@@ -1601,7 +1601,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 	int sched_cmds_arr_size = 0;
 	int i;
 	int num_cfg_svrs;
-	char tmp_str[100];
 
 	if (sigprocmask(SIG_BLOCK, &allsigs, &oldsigs) == -1)
 		log_err(errno, __func__, "sigprocmask(SIG_BLOCK)");
@@ -1624,7 +1623,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		die(0);	
 	}
 
-	sprintf(log_buffer, "Sched commands before filtering:");
 	for (svr_inst_idx = 0; svr_inst_idx < num_cfg_svrs; svr_inst_idx++) { 
 		int tmp_sock = svr_conns[svr_inst_idx].secondary_sd;
 
@@ -1638,8 +1636,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		} else
 			continue;
 
-		sprintf(tmp_str, "instance = %d cmd = %d jobid/value = %s,", svr_inst_idx, cmd, runjobid);
-		strcat(log_buffer, tmp_str);
 		socks_notify_arr[socks_notify_arr_size].sock = tmp_sock;
 		socks_notify_arr[socks_notify_arr_size].index = svr_inst_idx;
 		socks_notify_arr_size++;
@@ -1662,16 +1658,11 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		}
 	}
 
-	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
 
-	sprintf(log_buffer, "Sched commands after filtering:");
 	for (i = 0; i < sched_cmds_arr_size; i++) {
 		ifl_sock = sched_cmds_arr[i].sd;
 		int sched_ret;
 		static int num_svrs_updated = 0;
-
-		sprintf(tmp_str, " cmd = %d jobid/value = %s,", sched_cmds_arr[i].cmd,  sched_cmds_arr[i].value);
-		strcat(log_buffer, tmp_str);
 
 		if (num_svrs_updated < num_cfg_svrs) {
 			/* update sched object attributes on server */
@@ -1714,8 +1705,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			sched_cmds_arr[i].value = NULL;
 		}
 	}
-
-	log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", log_buffer);
 
 	for (i =0; i < socks_notify_arr_size; i++) {
 		if (send_cycle_end(socks_notify_arr[i].sock) == -1)
