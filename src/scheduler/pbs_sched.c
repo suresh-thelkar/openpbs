@@ -1558,8 +1558,7 @@ compare_modify_sched_cmd(sched_cmd_t *cmd_cache, sched_cmd_t *new_cmd)
 		(new_cmd->cmd != SCH_SCHEDULE_AJOB && new_cmd->cmd != SCH_CONFIGURE &&
 		 new_cmd->cmd != SCH_RULESET && new_cmd->cmd != SCH_ERROR)) {
 		cmd_cache->cmd = new_cmd->cmd;
-		if (cmd_cache->value == NULL)
-			cmd_cache->value = NULL;	
+		cmd_cache->value = NULL;	
 		return 1;	
 	}
 
@@ -1671,7 +1670,7 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 		int sched_ret;
 		static int num_svrs_updated = 0;
 
-		sprintf(tmp_str, " cmd = %d jobid/value = %s,", cmd, runjobid);
+		sprintf(tmp_str, " cmd = %d jobid/value = %s,", sched_cmds_arr[i].cmd,  sched_cmds_arr[i].value);
 		strcat(log_buffer, tmp_str);
 
 		if (num_svrs_updated < num_cfg_svrs) {
