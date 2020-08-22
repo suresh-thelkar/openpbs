@@ -853,7 +853,6 @@ req_stat_sched(struct batch_request *preq)
 	pbs_sched *psched;
 
 	/* allocate a reply structure and a status sub-structure */
-
 	preply = &preq->rq_reply;
 	preply->brp_choice = BATCH_REPLY_CHOICE_Status;
 	CLEAR_HEAD(preply->brp_un.brp_status);
@@ -862,6 +861,13 @@ req_stat_sched(struct batch_request *preq)
 			(psched != NULL);
 			psched = (pbs_sched *) GET_NEXT(psched->sc_link)
 		) {
+		if (psched == dflt_scheduler &&
+			((psched->sch_attr[(int) SCHED_ATR_SchedHost].at_flags & ATR_VFLAG_SET) == 0 ||
+			strcmp(pbs_conf.pbs_server_name, dflt_scheduler->sch_attr[SCHED_ATR_SchedHost].at_val.at_str))) {
+			req_reject(PBSE_NOSCHEDULER, 0, preq);
+			return;
+		}
+
 		rc = status_sched(psched, preq, &preply->brp_un.brp_status);
 		if (rc != 0) {
 			break;

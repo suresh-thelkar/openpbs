@@ -153,8 +153,8 @@ extern int do_hard_cycle_interrupt;
 
 static int	engage_authentication(int);
 static int	send_cycle_end(int);
-static int	socket_to_conn(int, struct sockaddr_in);
-static int	schedule_wrapper(fd_set *, int);
+static int	socket_to_conn(int, struct sockaddr_in,int *);
+static int	schedule_wrapper(fd_set *, int, int *, int);
 
 extern char *msg_startup1;
 
@@ -592,6 +592,7 @@ badconn(char *msg)
  *
  * @param[in/out]	max_sd	-	pointer to maximum socket descriptor. If new socket after
  * 					accept call is bigger then its value is returned to the caller.
+ * @param[in/out]	num_connected_svrs -	number of connected servers
  *
  * @return	int
  * @retval	SCH_ERROR	-	if an error occured.
@@ -602,7 +603,7 @@ badconn(char *msg)
  *		caller.
  */
 int
-accept_svr_conn(int *max_sd)
+accept_svr_conn(int *max_sd, int *num_connected_svrs)
 {
 	int new_socket = -1;
 	pbs_socklen_t slen;
@@ -644,13 +645,13 @@ accept_svr_conn(int *max_sd)
 		return SCH_ERROR;
 	}
 
-	if (socket_to_conn(new_socket, saddr) == -1) {
+	if (engage_authentication(new_socket) == -1) {
 		CS_close_socket(new_socket);
 		close(new_socket);
 		return SCH_ERROR;
 	}
 
-	if (engage_authentication(new_socket) == -1) {
+	if (socket_to_conn(new_socket, saddr, num_connected_svrs) == -1) {
 		CS_close_socket(new_socket);
 		close(new_socket);
 		return SCH_ERROR;
@@ -851,6 +852,7 @@ main(int argc, char *argv[])
 	char *endp = NULL;
 	pthread_mutexattr_t attr;
 	int num_cfg_svrs;
+	int num_connected_svrs = 0;
 	svr_conn_t *svr_conns = NULL;
 	int svr_inst_idx;
 
@@ -1391,10 +1393,12 @@ main(int argc, char *argv[])
 			 * by the time control reaches here. So we cannot use continue after accept_svr_conn.
 			 * we should go to the next block of code.
 			 */
-			accept_svr_conn(&max_sd);
+			accept_svr_conn(&max_sd, &num_connected_svrs);
+			if (num_connected_svrs != get_num_servers())
+				continue;
 		}
 
-		if (schedule_wrapper(&read_fdset, opt_no_restart) == 1)
+		if (schedule_wrapper(&read_fdset, opt_no_restart, &num_connected_svrs, alarm_time) == 1)
 			go = 0;
 	}
 
@@ -1423,8 +1427,9 @@ main(int argc, char *argv[])
  * @brief
  *  	socket_to_conn - Stores the socket in the corresponding data structure
  *
- * @param[in]	sock	-	socket descriptor
- * @param[in]	saddr_in	variable of type struct sockaddr_in
+ * @param[in]	sock	-		socket descriptor
+ * @param[in]	saddr_in -		variable of type struct sockaddr_in
+ * @param[in]	num_connected_svrs -	number of connected servers
  *
  * @return	int
  * @retval	-1	-	if an error occurs.
@@ -1432,7 +1437,7 @@ main(int argc, char *argv[])
  *
  */
 static int
-socket_to_conn(int sock, struct sockaddr_in saddr_in)
+socket_to_conn(int sock, struct sockaddr_in saddr_in, int *num_connected_svrs)
 {
 	char *svr_id;
 	int cmd;
@@ -1466,6 +1471,7 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		conn_arr[svr_conn_index].state = SVR_CONN_STATE_DOWN;
 		conn_arr[svr_conn_index].state_change_time = time(0);
 		strcpy(conn_arr[svr_conn_index].svr_id, svr_id);
+		conn_arr[svr_conn_index].from_sched = 1;
 	}
 
 	free(svr_id);
@@ -1476,6 +1482,7 @@ socket_to_conn(int sock, struct sockaddr_in saddr_in)
 		conn_arr[svr_conn_index].secondary_sd = sock;
 		conn_arr[svr_conn_index].state = SVR_CONN_STATE_CONNECTED;
 		FD_SET(sock, &master_fdset);
+		(*num_connected_svrs)++;
 	} else {
 		log_eventf(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
 			"Duplicate Server entry server name = %s, port = %d", svrname, port);
@@ -1526,19 +1533,20 @@ send_cycle_end(int socket)
  *
  * @param[in]	read_fdset	-	pointer to read_fdset
  * @param[in]	opt_no_restart	-	option that says no restart
+ * @param[in]	num_connected_svrs -	number of connected servers
+ * @param[in]	alarm_time	-	alarm time
  *
  * @return	int
  * @retval	0	: continue calling scheduling cycles
  * @retval	1	: exit scheduler
  */
 static int
-schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
+schedule_wrapper(fd_set *read_fdset, int opt_no_restart, int *num_connected_svrs, int alarm_time)
 {
 	int svr_inst_idx;
 	int sock_to_check  = -1;
 	int ifl_sock = -1;
 	int cmd;
-	int alarm_time = 0;
 	char *runjobid = NULL;
 	svr_conn_t *svr_conns = NULL;
 	int num_cfg_svrs = get_num_servers();
@@ -1560,10 +1568,12 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 			ret = get_sched_cmd(sock_to_check, &cmd, &runjobid);
 			if (ret != 1) {
 				close_server_conn(svr_inst_idx);
+				(*num_connected_svrs)--;
 				log_eventf(PBSEVENT_SYSTEM, PBS_EVENTCLASS_SCHED, LOG_ERR, __func__,
 						"get_sched_cmd failed, errno=%d in function %s. "
 						"One  of the reasons includes server might have shutdown",
 						errno, __func__);
+				break;
 			} else {
 				int sched_ret;
 				static int num_svrs_updated = 0;
@@ -1572,7 +1582,8 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 					/* update sched object attributes on server */
 					if (update_svr_schedobj(ifl_sock, cmd, alarm_time) == 0) {
 						close_server_conn(svr_inst_idx);
-						continue;
+						(*num_connected_svrs)--;
+						break;
 					}
 					num_svrs_updated++;
 				}
@@ -1603,9 +1614,15 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart)
 						return 1;
 
 					close_server_conn(svr_inst_idx);
+					(*num_connected_svrs)--;
+					break;
 				} else {	/* Successful cycle */
-					if (send_cycle_end(second_connection) == -1)
+					if (send_cycle_end(second_connection) == -1) {
 						close_server_conn(svr_inst_idx);
+						(*num_connected_svrs)--;
+						break;
+					}
+
 				}
 
 				if (runjobid != NULL) {

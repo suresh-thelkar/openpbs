@@ -2896,10 +2896,7 @@ int
 update_svr_schedobj(int connector, int cmd, int alarm_time)
 {
 	char tempstr[128];
-	char port_str[MAX_INT_LEN];
 	struct attropl*attribs, *patt;
-	char sched_host[PBS_MAXHOSTNAME + 1];
-
 
 	if (cmd == SCH_ERROR || connector < 0)
 		return 1;
@@ -2909,29 +2906,13 @@ update_svr_schedobj(int connector, int cmd, int alarm_time)
 	}
 
 	/* update the sched with new values */
-	attribs = calloc(4, sizeof(struct attropl));
+	attribs = calloc(2, sizeof(struct attropl));
 	if (attribs == NULL) {
 		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_SCHED, LOG_INFO, __func__, MEM_ERR_MSG);
 		return 0;
 	}
 
-	if ((gethostname(sched_host, (sizeof(sched_host) - 1)) == -1) ||
-		(get_fullhostname(sched_host, sched_host, (sizeof(sched_host) - 1)) == -1)) {
-		log_err(-1, __func__, "Unable to get my host name");
-		free(attribs);
-		return 0;
-	}
-
 	patt = attribs;
-	patt->name = ATTR_SchedHost;
-	patt->value = sched_host;
-	patt->next = patt + 1;
-	patt++;
-	patt->name = ATTR_sched_port;
-	snprintf(port_str, MAX_INT_LEN, "%d", sched_port);
-	patt->value = port_str;
-	patt->next = patt + 1;
-	patt++;
 	patt->name = ATTR_version;
 	patt->value = PBS_VERSION;
 	if (alarm_time) {
