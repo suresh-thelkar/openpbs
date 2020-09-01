@@ -534,10 +534,10 @@ struct batch_status *
 PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *extend, int parent_object)
 {
 	int i;
+	int rc = 0;
 	struct batch_status *ret = NULL;
 	struct batch_status *next = NULL;
 	struct batch_status *cur = NULL;
-	int attrs_verified = 0;
 	svr_conn_t *svr_connections = get_conn_servers();
 	int num_cfg_svrs = get_num_servers();
 
@@ -548,24 +548,13 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 	if (pbs_client_thread_init_thread_context() != 0)
 		return NULL;
 
-	for (i = 0; !(attrs_verified) && i < num_cfg_svrs; i++) {
-		/* first verify the attributes, if verification is enabled */
-		if ((pbs_verify_attributes(svr_connections[i].sd, cmd,
-			parent_object, MGR_CMD_NONE, (struct attropl *) attrib)))
-			continue;
-		else {
-			attrs_verified = 1;
-			break;
-		}
-	}
-
-	if (i == num_cfg_svrs)
+	/* now verify the attributes, if verification is enabled */
+	if (pbs_verify_attributes_wrapper(cmd, parent_object, MGR_CMD_NONE, (struct attropl *) attrib) != 0)
 		return NULL;
 
 	for (i = 0; i <num_cfg_svrs; i++) {
 		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
-			if (svr_connections[i].from_sched)
-				return NULL;
+			rc = PBSE_NOSERVER;
 			continue;
 		}
 
@@ -601,6 +590,9 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 		if (pbs_client_thread_unlock_connection(c) != 0)
 			return NULL;
 	}
+
+	if (rc)
+		pbs_errno = rc;
 
 	return ret;
 }

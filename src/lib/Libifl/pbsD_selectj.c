@@ -199,8 +199,7 @@ __pbs_selectjob(int c, struct attropl *attrib, char *extend)
 
 	for (i = 0; i < get_num_servers(); i++) {
 		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
-			if (svr_connections[i].from_sched)
-				return NULL;
+			pbs_errno = PBSE_NOSERVER;
 			continue;
 		}
 
@@ -258,7 +257,6 @@ __pbs_selstat(int c, struct attropl *attrib, struct attrl *rattrib, char *extend
 	struct batch_status *next = NULL;
 	struct batch_status *cur = NULL;
 	svr_conn_t *svr_connections = get_conn_servers();
-	int attrs_verified = 0;
 	int num_cfg_svrs = get_num_servers();
 
 	if (!svr_connections)
@@ -268,25 +266,14 @@ __pbs_selstat(int c, struct attropl *attrib, struct attrl *rattrib, char *extend
 	if (pbs_client_thread_init_thread_context() != 0)
 		return NULL;
 
-	for (i = 0; !(attrs_verified) && i < num_cfg_svrs; i++) {
-		/* first verify the attributes, if verification is enabled */
-		if ((pbs_verify_attributes(svr_connections[i].sd, PBS_BATCH_SelectJobs,
-			MGR_OBJ_JOB, MGR_CMD_NONE, attrib)))
-			continue;
-		else {
-			attrs_verified = 1;
-			break;
-		}
-	}
-
-	if (i == num_cfg_svrs)
+	/* now verify the attributes, if verification is enabled */
+	if (pbs_verify_attributes_wrapper(PBS_BATCH_SelectJobs, MGR_OBJ_JOB, MGR_CMD_NONE, (struct attropl *) attrib) != 0)
 		return NULL;
 
 	for (i = 0; i < num_cfg_svrs; i++) {
 
 		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
-			if (svr_connections[i].from_sched)
-				return NULL;
+			pbs_errno = PBSE_NOSERVER;
 			continue;
 		}
 

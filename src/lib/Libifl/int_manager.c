@@ -76,7 +76,6 @@ PBSD_manager(int c, int function, int command, int objtype, char *objname, struc
 	struct batch_reply *reply;
 	int rc = 0;
 	int agg_rc = 0;
-	int attrs_verified = 0;
 	svr_conn_t *svr_connections = get_conn_servers();
 	int num_cfg_svrs = get_num_servers();
 
@@ -92,29 +91,15 @@ PBSD_manager(int c, int function, int command, int objtype, char *objname, struc
 		if (pbs_verify_object_name(objtype, objname) != 0)
 			return pbs_errno;
 
-
-	for (i = 0; !(attrs_verified) && i < num_cfg_svrs; i++) {
-		/* now verify the attributes, if verification is enabled */
-		if ((pbs_verify_attributes(svr_connections[i].sd, function, objtype, command, aoplp)))
-			continue;
-		else {
-			attrs_verified = 1;
-			break;
-		}
-	}
-
-	if (i == num_cfg_svrs)
+	/* now verify the attributes, if verification is enabled */
+	if (pbs_verify_attributes_wrapper(function, objtype, command, (struct attropl *) aoplp) != 0)
 		return pbs_errno;
 
 	for (i = 0; i < num_cfg_svrs; i++) {
 		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
-			if (svr_connections[i].from_sched)
-				return (pbs_errno = PBSE_NOSERVER);
-			else {
-				pbs_errno = PBSE_NOSERVER;
-				agg_rc = pbs_errno;
-				continue;
-			}
+			pbs_errno = PBSE_NOSERVER;
+			agg_rc = pbs_errno;
+			continue;
 		}
 
 		c = svr_connections[i].sd;

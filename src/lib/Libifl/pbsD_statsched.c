@@ -67,58 +67,5 @@
 struct batch_status *
 __pbs_statsched(int c, struct attrl *attrib, char *extend)
 {
-	struct batch_status *ret = NULL;
-	int attrs_verified = 0;
-	svr_conn_t *svr_connections = get_conn_servers();
-	int num_cfg_svrs = get_num_servers();
-	int i;
-
-	if (!svr_connections)
-		return NULL;
-
-	/* initialize the thread context data, if not already initialized */
-	if (pbs_client_thread_init_thread_context() != 0)
-		return NULL;
-
-	for (i = 0; !(attrs_verified) && i < num_cfg_svrs; i++) {
-		/* now verify the attributes, if verification is enabled */
-		if ((pbs_verify_attributes(svr_connections[i].sd, PBS_BATCH_StatusSched, MGR_OBJ_SCHED, MGR_CMD_NONE, (struct attropl *) attrib)))
-			continue;
-		else {
-			attrs_verified = 1;
-			break;
-		}
-	}
-
-	if (i == num_cfg_svrs)
-		return NULL;
-
-	for (i = 0; i < num_cfg_svrs; i++) {
-		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
-			if (svr_connections[i].from_sched)
-				return NULL;
-			continue;
-		}
-
-		c = svr_connections[i].sd;
-
-		/* lock pthread mutex here for this connection */
-		/* blocking call, waits for mutex release */
-		if (pbs_client_thread_lock_connection(c) != 0)
-			return NULL;
-
-		ret = PBSD_status(c, -1, PBS_BATCH_StatusSched, "", attrib, extend);
-
-		if (ret == NULL) {
-			pbs_client_thread_unlock_connection(c);
-			continue;
-		} else {
-			/* unlock the thread lock and update the thread context data */
-			if (pbs_client_thread_unlock_connection(c) != 0)
-				return NULL;
-			return ret;
-		}
-	}
-
-	return ret;
+	return PBSD_status_random(c, PBS_BATCH_StatusSched, "", attrib, extend, MGR_OBJ_SCHED);
 }
