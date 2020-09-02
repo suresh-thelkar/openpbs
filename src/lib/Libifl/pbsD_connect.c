@@ -497,6 +497,7 @@ connect_to_servers(char *server_name, uint port, char *extend_data)
 {
 	int i = 0;
 	int fd = -1;
+	int start_fd = -1;
 	int start = -1;
 	int multi_flag = 0;
 	int num_conf_servers = get_num_servers();
@@ -526,6 +527,9 @@ connect_to_servers(char *server_name, uint port, char *extend_data)
 	i = start;
 	do {
 		fd = connect_to_server(i, svr_connections, extend_data);
+		if (start_fd == -1 && fd != -1)
+			start_fd = fd;
+
 		if (svr_connections[i].state == SVR_CONN_STATE_CONNECTED && !multi_flag)
 			break;
 
@@ -534,7 +538,7 @@ connect_to_servers(char *server_name, uint port, char *extend_data)
 			i = 0;
 	} while (i != start);
 
-	return fd;
+	return start_fd;
 }
 
 /**

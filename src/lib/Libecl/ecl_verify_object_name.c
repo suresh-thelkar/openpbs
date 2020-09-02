@@ -192,27 +192,25 @@ int
 pbs_verify_attributes_wrapper(int batch_request,int parent_object, int cmd, struct attropl *attribute_list)
 {
 	int i;
-	int attrs_verified = 0;
+	int rc = 0;
 	svr_conn_t *svr_connections = get_conn_servers();
 	int num_cfg_svrs = get_num_servers();
 
 	if (!svr_connections)
 		return (pbs_errno = PBSE_NOSERVER);
 
-	for (i = 0; !(attrs_verified) && i < num_cfg_svrs; i++) {
-		/* now verify the attributes, if verification is enabled */
-		if ((pbs_verify_attributes(svr_connections[i].sd, batch_request, parent_object, cmd, attribute_list)))
+	for (i = 0; i < num_cfg_svrs; i++) {
+		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
+			rc = PBSE_NOSERVER;
 			continue;
-		else {
-			attrs_verified = 1;
-			break;
 		}
+		/* now verify the attributes, if verification is enabled */
+		if ((rc = pbs_verify_attributes(svr_connections[i].sd, batch_request, parent_object, cmd, attribute_list)))
+			return rc;
+		else
+			return 0;
 	}
 
-	if (i == num_cfg_svrs)
-		return -1;
-	else
-		return 0;
-	
+	return rc;
 }
 

@@ -154,7 +154,7 @@ extern int do_hard_cycle_interrupt;
 static int	engage_authentication(int);
 static int	send_cycle_end(int);
 static int	socket_to_conn(int, struct sockaddr_in,int *);
-static int	schedule_wrapper(fd_set *, int, int *, int);
+static int	schedule_wrapper(fd_set *, int, int *);
 
 extern char *msg_startup1;
 
@@ -841,8 +841,6 @@ main(int argc, char *argv[])
 #ifdef _POSIX_MEMLOCK
 	int		do_mlockall = 0;
 #endif	/* _POSIX_MEMLOCK */
-	int		alarm_time = 0;
-	char 		logbuf[1024];
 	extern char     *msg_corelimit;
 #ifdef  RLIMIT_CORE
 	int      	char_in_cname = 0;
@@ -948,15 +946,6 @@ main(int argc, char *argv[])
 				break;
 			case 'c':
 				configfile = optarg;
-				break;
-			case 'a':
-				alarm_time = atoi(optarg);
-				if (alarm_time == 0) {
-					fprintf(stderr,
-						"%s: bad alarm time\n", optarg);
-					errflg = 1;
-				}
-				fprintf(stderr, "The -a option is deprecated.  Please see the \'%s\' scheduler attribute.\n", ATTR_sched_cycle_len);
 				break;
 			case 'n':
 				opt_no_restart = 1;
@@ -1099,11 +1088,6 @@ main(int argc, char *argv[])
 		log_record(PBSEVENT_ERROR, PBS_EVENTCLASS_SCHED, LOG_WARNING,
 			__func__, msg_corelimit);
 #endif  /* RLIMIT_CORE */
-
-	if (alarm_time) {
-		snprintf(logbuf, sizeof(logbuf), "The -a option was given on the command line.  This is deprecated.  Please see the \'%s\' scheduler attribute", ATTR_sched_cycle_len);
-		log_record(PBSEVENT_SCHED, PBS_EVENTCLASS_SCHED, LOG_NOTICE, "", logbuf);
-	}
 
 	if (gethostname(host, (sizeof(host) - 1)) == -1) {
 		log_err(errno, __func__, "gethostname");
@@ -1398,7 +1382,7 @@ main(int argc, char *argv[])
 				continue;
 		}
 
-		if (schedule_wrapper(&read_fdset, opt_no_restart, &num_connected_svrs, alarm_time) == 1)
+		if (schedule_wrapper(&read_fdset, opt_no_restart, &num_connected_svrs) == 1)
 			go = 0;
 	}
 
@@ -1534,14 +1518,13 @@ send_cycle_end(int socket)
  * @param[in]	read_fdset	-	pointer to read_fdset
  * @param[in]	opt_no_restart	-	option that says no restart
  * @param[in]	num_connected_svrs -	number of connected servers
- * @param[in]	alarm_time	-	alarm time
  *
  * @return	int
  * @retval	0	: continue calling scheduling cycles
  * @retval	1	: exit scheduler
  */
 static int
-schedule_wrapper(fd_set *read_fdset, int opt_no_restart, int *num_connected_svrs, int alarm_time)
+schedule_wrapper(fd_set *read_fdset, int opt_no_restart, int *num_connected_svrs)
 {
 	int svr_inst_idx;
 	int sock_to_check  = -1;
@@ -1580,7 +1563,7 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart, int *num_connected_svrs
 
 				if (num_svrs_updated < num_cfg_svrs) {
 					/* update sched object attributes on server */
-					if (update_svr_schedobj(ifl_sock, cmd, alarm_time) == 0) {
+					if (update_svr_schedobj(ifl_sock, cmd) == 0) {
 						close_server_conn(svr_inst_idx);
 						(*num_connected_svrs)--;
 						break;

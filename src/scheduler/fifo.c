@@ -2893,9 +2893,8 @@ cleanup:
  *
  */
 int
-update_svr_schedobj(int connector, int cmd, int alarm_time)
+update_svr_schedobj(int connector, int cmd)
 {
-	char tempstr[128];
 	struct attropl*attribs, *patt;
 
 	if (cmd == SCH_ERROR || connector < 0)
@@ -2906,7 +2905,7 @@ update_svr_schedobj(int connector, int cmd, int alarm_time)
 	}
 
 	/* update the sched with new values */
-	attribs = calloc(2, sizeof(struct attropl));
+	attribs = calloc(1, sizeof(struct attropl));
 	if (attribs == NULL) {
 		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_SCHED, LOG_INFO, __func__, MEM_ERR_MSG);
 		return 0;
@@ -2915,13 +2914,6 @@ update_svr_schedobj(int connector, int cmd, int alarm_time)
 	patt = attribs;
 	patt->name = ATTR_version;
 	patt->value = PBS_VERSION;
-	if (alarm_time) {
-		patt->next = patt + 1;
-		patt++;
-		patt->name = ATTR_sched_cycle_len;
-		snprintf(tempstr, sizeof(tempstr), "%d", alarm_time);
-		patt->value = tempstr;
-	}
 	patt->next = NULL;
 
 	pbs_manager(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
