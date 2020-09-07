@@ -1619,8 +1619,7 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 
 	get_resresv_spec(resresv, &spec, &pl);
 
-	if (using_svr_nodes && nodepart == NULL && (sinfo->svr_node_array[resresv->svr_index] != NULL) &&
-		sinfo->svr_node_array[resresv->svr_index]->unassoc_nodes != NULL) {
+	if (using_svr_nodes && nodepart == NULL && sinfo->svr_node_array[resresv->svr_index] != NULL && sinfo->svr_node_array[resresv->svr_index]->unassoc_nodes != NULL) {
 		ninfo_arr = sinfo->svr_node_array[resresv->svr_index]->unassoc_nodes;
 		svr_index_used = resresv->svr_index;
 	}
