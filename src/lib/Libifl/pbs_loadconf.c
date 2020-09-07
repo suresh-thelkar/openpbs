@@ -297,8 +297,15 @@ parse_psi(char *conf_value)
 		}
 		if (pbs_conf.psi[i].name[0] == '\0')
 			strcpy(pbs_conf.psi[i].name, pbs_conf.pbs_server_name);
-		if (pbs_conf.psi[i].port == 0)
-			pbs_conf.psi[i].port = pbs_conf.batch_service_port;
+		if (pbs_conf.psi[i].port == 0) {
+			if (strcmp(pbs_conf.psi[i].name, pbs_conf.pbs_server_name) == 0)
+				pbs_conf.psi[i].port = pbs_conf.batch_service_port;
+			else {
+				fprintf(stderr, "Port number is mandatory for non local servers. Please correct PBS_SERVER_INSTANCES\n");
+				return -1;
+			}
+
+		}
 	}
 	free_string_array(list);
 	pbs_conf.pbs_num_servers = i;
@@ -928,7 +935,8 @@ __pbs_loadconf(int reload)
 		goto err;
 	}
 
-	parse_psi(psi_value ? psi_value : pbs_conf.pbs_server_name);
+	if (parse_psi(psi_value ? psi_value : pbs_conf.pbs_server_name) == -1)
+		goto err;
 	free(psi_value);
 
 	/*

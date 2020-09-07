@@ -138,7 +138,7 @@ init_msi()
 
 	for (i = 0; i < get_num_servers(); i++) {
 
-		if (!strcmp(pbs_conf.psi[i].name, server_host) &&
+		if (!strcmp(pbs_conf.psi[i].name, pbs_conf.pbs_server_name) &&
 		    (pbs_conf.psi[i].port == pbs_server_port_dis))
 			continue;
 
