@@ -2875,55 +2875,6 @@ cleanup:
 
 /**
  * @brief
- *	Updates a set of attribute values of scheduler to the server and also does a status of this scheduler
- *	on server and fetches the updates of its attributes.
- *
- * @param[in] connector - socket descriptor to server
- * @param[in] cmd     - scheduler command
- * @param[in] alarm_time  - value to be updated for scheduler cycle length.
- *
- *
- * @retval Error code
- * @return 0 - Failure
- * @return 1 - Success
- *
- * @par Side Effects:
- *	None
- *
- *
- */
-int
-update_svr_schedobj(int connector, int cmd)
-{
-	struct attropl*attribs, *patt;
-
-	if (cmd == SCH_ERROR || connector < 0)
-		return 1;
-
-	if (!set_validate_sched_attrs(connector)) {
-		return 0;
-	}
-
-	/* update the sched with new values */
-	attribs = calloc(1, sizeof(struct attropl));
-	if (attribs == NULL) {
-		log_event(PBSEVENT_DEBUG, PBS_EVENTCLASS_SCHED, LOG_INFO, __func__, MEM_ERR_MSG);
-		return 0;
-	}
-
-	patt = attribs;
-	patt->name = ATTR_version;
-	patt->value = PBS_VERSION;
-	patt->next = NULL;
-
-	pbs_manager(connector, MGR_CMD_SET, MGR_OBJ_SCHED, sc_name, attribs, NULL);
-
-	free(attribs);
-	return 1;
-}
-
-/**
- * @brief
  *	Set and validate the sched object attributes queried from Server
  *
  * @param[in] connector - socket descriptor to server

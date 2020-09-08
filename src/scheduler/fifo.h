@@ -228,7 +228,6 @@ int main_sched_loop(status *policy, int sd, server_info *sinfo, schd_error **rer
  */
 int scheduler_simulation_task(int pbs_sd, int debug);
 
-int update_svr_schedobj(int connector, int cmd);
 
 int set_validate_sched_attrs(int connector);
 

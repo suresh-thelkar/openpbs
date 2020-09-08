@@ -56,7 +56,6 @@
  *	badconn()
  *	server_command()
  *	engage_authentication()
- *	update_svr_schedobj()
  *	lock_out()
  *	are_we_primary()
  *	main()
@@ -1559,17 +1558,6 @@ schedule_wrapper(fd_set *read_fdset, int opt_no_restart, int *num_connected_svrs
 				break;
 			} else {
 				int sched_ret;
-				static int num_svrs_updated = 0;
-
-				if (num_svrs_updated < num_cfg_svrs) {
-					/* update sched object attributes on server */
-					if (update_svr_schedobj(ifl_sock, cmd) == 0) {
-						close_server_conn(svr_inst_idx);
-						(*num_connected_svrs)--;
-						break;
-					}
-					num_svrs_updated++;
-				}
 
 				/* Keep track of time to use in SIGSEGV handler */
 #ifdef NAS /* localmod 031 */
