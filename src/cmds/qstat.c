@@ -2825,6 +2825,8 @@ qstat -B [-f] [-F format] [-D delim] [ server_name... ]\n";
 
 		strcpy(operand, argv[optind]);
 		tcl_addarg(ops, operand);
+		show_svr_inst_fail();
+
 		switch (mode) {
 
 			case JOBS:      /* get status of batch jobs */
@@ -2935,8 +2937,6 @@ job_no_args:
 					any_failed = connect;
 					break;
 				}
-
-				show_svr_inst_fail();
 
 				if (strcmp(pbs_server, server_old) != 0) {
 					/* changing to a different server */
@@ -3122,8 +3122,6 @@ que_no_args:
 					break;
 				}
 
-				show_svr_inst_fail();
-
 				p_status = pbs_statque(connect, queue_name_out, NULL, "full");
 				if (p_status == NULL) {
 					if (pbs_errno && (pbs_errno != PBSE_NOSERVER)) {
@@ -3172,8 +3170,6 @@ svr_no_args:
 					any_failed = connect;
 					break;
 				}
-
-				show_svr_inst_fail();
 
 				p_status = pbs_statserver(connect, NULL, "full");
 				if (p_status == NULL) {

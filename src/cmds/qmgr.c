@@ -2959,12 +2959,12 @@ execute(int aopt, int oper, int type, char *names, struct attropl *attribs)
 					else if (pbs_errno == PBSE_HOOKERROR) {
 						pstderr("qmgr: hook error returned from server\n");
 					}
-					else if ((num_connected_svrs == get_num_servers()) && (pbs_errno == PBSE_NOSERVER))
+					else if ((pbs_errno == PBSE_NOSERVER) && (num_connected_svrs == get_num_servers()))
 						/*
 						 * Assume that all servers are up when qmgr started, but by the time we reach here if one of IFLs
 						 * gvies the return code PBSE_NOSERVER then only we need to display the following message.
 						 */
-						pstderr("Requested operation is partially successful. Please run this command again\n");
+						pstderr("At least one of the servers is down, please run this command again\n");
 					else
 						if (pbs_errno != 0)  /* 0 happens with hooks if no hooks found */
 							PSTDERR1("qmgr: Error (%d) returned from server\n", pbs_errno)
