@@ -591,7 +591,7 @@ action_sched_host(attribute *pattr, void *pobj, int actmode)
 	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER || actmode == ATR_ACTION_RECOV) {
 			psched->pbs_scheduler_addr = get_hostaddr(pattr->at_val.at_str);
 			if (psched->pbs_scheduler_addr == (pbs_net_t)0)
-				return PBSE_BADATVAL;
+				return PBSE_BADHOST;
 	}
 	return PBSE_NONE;
 }
@@ -615,9 +615,6 @@ action_sched_priv(attribute *pattr, void *pobj, int actmode)
 	pbs_sched* psched;
 
 	psched = (pbs_sched *) pobj;
-
-	if (pobj == dflt_scheduler)
-		return PBSE_SCHED_OP_NOT_PERMITTED;
 
 	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
 		psched = (pbs_sched *) GET_NEXT(svr_allscheds);
@@ -655,9 +652,6 @@ action_sched_log(attribute *pattr, void *pobj, int actmode)
 {
 	pbs_sched* psched;
 	psched = (pbs_sched *) pobj;
-
-	if (pobj == dflt_scheduler)
-		return PBSE_SCHED_OP_NOT_PERMITTED;
 
 	if (actmode == ATR_ACTION_NEW || actmode == ATR_ACTION_ALTER) {
 		psched = (pbs_sched*) GET_NEXT(svr_allscheds);
@@ -913,15 +907,23 @@ set_sched_default(pbs_sched *psched, int from_scheduler)
 			temp = "1";
 		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_scheduling]), &sched_attr_def[(int) SCHED_ATR_scheduling], temp);
 	}
-	if ((psched->sch_attr[(int) SCHED_ATR_sched_state].at_flags & ATR_VFLAG_SET) == 0) {
-			if (psched != dflt_scheduler)
-				temp = SC_DOWN;
-			else
-				temp = SC_IDLE;
-			set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], temp);
+	if ((psched->sch_attr[(int) SCHED_ATR_SchedHost].at_flags & ATR_VFLAG_SET) == 0)
+		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_SchedHost]), &sched_attr_def[(int) SCHED_ATR_SchedHost], pbs_conf.pbs_server_name);
+
+	if ((psched->sch_attr[(int) SCHED_ATR_sched_port].at_flags & ATR_VFLAG_SET) == 0) {
+		psched->sch_attr[SCHED_ATR_sched_port].at_val.at_long = pbs_conf.scheduler_service_port;
+		psched->sch_attr[SCHED_ATR_sched_port].at_flags |= ATR_SET_MOD_MCACHE | ATR_VFLAG_DEFLT;
 	}
 
-	if ((psched->sch_attr[(int) SCHED_ATR_sched_priv].at_flags & ATR_VFLAG_SET) == 0) {
+	if ((psched->sch_attr[(int) SCHED_ATR_sched_state].at_flags & ATR_VFLAG_SET) == 0) {
+		if (psched != dflt_scheduler)
+			temp = SC_DOWN;
+		else
+			temp = SC_IDLE;
+		set_attr_svr(&(psched->sch_attr[(int) SCHED_ATR_sched_state]), &sched_attr_def[(int) SCHED_ATR_sched_state], temp);
+	}
+
+	if ((psched->sch_attr[(int) SCHED_ATR_sched_priv].at_flags & ATR_VFLAG_SET) == 0 ) {
 			if (psched != dflt_scheduler)
 				(void) snprintf(dir_path, MAXPATHLEN, "%s/sched_priv_%s", pbs_conf.pbs_home_path, psched->sc_name);
 			else

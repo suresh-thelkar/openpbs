@@ -1686,12 +1686,16 @@ try_db_again:
 				if (server_init_type == RECOV_CREATE)
 					break;
 
+				if (psched->sch_attr[(int)SCHED_ATR_scheduling].at_val.at_long == 0)
+					continue;
+
 				/* if time or event says to run scheduler, do it */
 				if (psched->scheduler_sock[0] == CONN_UNKNOWN &&
 					psched->scheduler_sock[1] == CONN_UNKNOWN) {
 					connect_to_scheduler(psched);
 					continue;
 				}
+
 				/* if we have a high prio sched command, send it 1st */
 				if (psched->svr_do_sched_high != SCH_SCHEDULE_NULL)
 					schedule_high(psched);

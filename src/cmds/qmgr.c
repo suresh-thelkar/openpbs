@@ -176,6 +176,8 @@ static char *entlim_attrs[] = {
 	NULL		/* keep as last one please */
 };
 
+int num_connected_svrs = 0;
+
 /* Hook-related variables and functions */
 
 static char *hook_tempfile = NULL;  /* a temporary file in PBS_HOOK_WORKDIR */
@@ -1613,6 +1615,19 @@ make_connection(char *name)
 	else
 		PSTDERR1("qmgr: cannot connect to server %s\n", name)
 
+	if (getenv(MULTI_SERVER)) {
+		int i;
+		svr_conn_t *svr_connections = get_conn_servers();
+		for (i = 0; i < get_num_servers(); i++) {
+			if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
+				PSTDERR1("qmgr: cannot connect to server %s\n", pbs_conf.psi[i].name)
+			}
+			else
+				num_connected_svrs++;
+			
+		}
+	}
+
 	return svr;
 }
 
@@ -1649,7 +1664,7 @@ connect_servers(struct objname *server_names, int numservers)
 		/* if numservers == -1 (all servers) the var i will never equal zero */
 		for (i = numservers; i != 0 && cur_obj != NULL; i--, cur_obj=cur_obj->next) {
 			nservers++;
-			if ((cur_svr = make_connection(cur_obj->svr_name)) ==NULL) {
+			if ((cur_svr = make_connection(cur_obj->svr_name)) == NULL) {
 				nservers--;
 				error = TRUE;
 			}
@@ -2944,6 +2959,12 @@ execute(int aopt, int oper, int type, char *names, struct attropl *attribs)
 					else if (pbs_errno == PBSE_HOOKERROR) {
 						pstderr("qmgr: hook error returned from server\n");
 					}
+					else if ((pbs_errno == PBSE_NOSERVER) && (num_connected_svrs == get_num_servers()))
+						/*
+						 * Assume that all servers are up when qmgr started, but by the time we reach here if one of IFLs
+						 * gvies the return code PBSE_NOSERVER then only we need to display the following message.
+						 */
+						pstderr("At least one of the servers is down, please run this command again\n");
 					else
 						if (pbs_errno != 0)  /* 0 happens with hooks if no hooks found */
 							PSTDERR1("qmgr: Error (%d) returned from server\n", pbs_errno)

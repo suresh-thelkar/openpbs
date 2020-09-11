@@ -105,7 +105,7 @@ stat_resvs(int pbs_sd)
 	char *errmsg;
 
 	/* get the reservation info from the PBS server */
-	if ((resvs = pbs_statresv(pbs_sd, NULL, NULL, NULL)) == NULL) {
+	if (((resvs = pbs_statresv(pbs_sd, NULL, NULL, NULL)) == NULL) || pbs_errno) {
 		if (pbs_errno) {
 			errmsg = pbs_geterrmsg(pbs_sd);
 			if (errmsg == NULL)

@@ -534,10 +534,12 @@ struct batch_status *
 PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *extend, int parent_object)
 {
 	int i;
+	int rc = 0;
 	struct batch_status *ret = NULL;
 	struct batch_status *next = NULL;
 	struct batch_status *cur = NULL;
 	svr_conn_t *svr_connections = get_conn_servers();
+	int num_cfg_svrs = get_num_servers();
 
 	if (!svr_connections)
 		return NULL;
@@ -546,14 +548,15 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 	if (pbs_client_thread_init_thread_context() != 0)
 		return NULL;
 
-	/* first verify the attributes, if verification is enabled */
-	if ((pbs_verify_attributes(random_srv_conn(svr_connections), cmd,
-		parent_object, MGR_CMD_NONE, (struct attropl *) attrib)))
+	/* now verify the attributes, if verification is enabled */
+	if (pbs_verify_attributes_wrapper(cmd, parent_object, MGR_CMD_NONE, (struct attropl *) attrib) != 0)
 		return NULL;
 
-	for (i = 0; i < get_num_servers(); i++) {
-		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED)
+	for (i = 0; i <num_cfg_svrs; i++) {
+		if (svr_connections[i].state != SVR_CONN_STATE_CONNECTED) {
+			rc = PBSE_NOSERVER;
 			continue;
+		}
 
 		c = svr_connections[i].sd;
 
@@ -587,6 +590,9 @@ PBSD_status_aggregate(int c, int cmd, char *id, struct attrl *attrib, char *exte
 		if (pbs_client_thread_unlock_connection(c) != 0)
 			return NULL;
 	}
+
+	if (rc)
+		pbs_errno = rc;
 
 	return ret;
 }
@@ -659,14 +665,10 @@ PBSD_status_get(int c, int svr_index)
 	int i;
 	struct attrl *pat;
 	svr_conn_t *svr_conns;
-	int from_sched = 0;
 
 	svr_conns = get_conn_servers();
 	if (svr_conns == NULL)
 		return NULL;
-
-	if ((svr_index != -1) && (svr_conns[svr_index].secondary_sd != -1))
-		from_sched = 1;
 
 	/* read reply from stream into presentation element */
 
@@ -707,7 +709,7 @@ PBSD_status_get(int c, int svr_index)
 			bsp->next = NULL;
 			rbsp->last = bsp;
 
-			if (from_sched) {
+			if ((svr_index != -1) && (svr_conns[svr_index].from_sched)) {
 				/*Add server_idx attribute */
 				pat = new_attrl();
 				if (pat == NULL) {

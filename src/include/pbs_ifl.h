@@ -578,6 +578,7 @@ typedef struct svr_conn {
 	char svr_id[MAX_SVR_ID];    	/* svr_id of the form server_name:port */
 	char name[PBS_MAXHOSTNAME];	/* server name */
 	int port;						/* server port */
+	int from_sched;					/* flag to indicate whether this conn is from sched or not */
 } svr_conn_t;
 
 /* Resource Reservation Information */

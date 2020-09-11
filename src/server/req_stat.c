@@ -853,7 +853,6 @@ req_stat_sched(struct batch_request *preq)
 	pbs_sched *psched;
 
 	/* allocate a reply structure and a status sub-structure */
-
 	preply = &preq->rq_reply;
 	preply->brp_choice = BATCH_REPLY_CHOICE_Status;
 	CLEAR_HEAD(preply->brp_un.brp_status);
