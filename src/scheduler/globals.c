@@ -132,7 +132,6 @@ struct status cstat;
 
 /* to make references happy */
 int got_sigpipe;
-sched_svrconn **servers = NULL;
 ds_queue *sched_cmds = NULL;
 void *poll_context = NULL;
 
@@ -175,3 +174,7 @@ struct schedattrs sc_attrs;
 time_t last_attr_updates = 0;
 
 int send_job_attr_updates = 1;
+
+int clust_primary_sock = -1;
+
+int clust_secondary_sock = -1;
