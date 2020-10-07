@@ -365,6 +365,9 @@ get_conn_servers(int parentfd)
 	svr_conns_list_t *conn_list = NULL;
 	svr_conn_t *msvr_conns = NULL;
 
+	if (psi_key == 0)
+		return NULL;
+
 	conn_list = pthread_getspecific(psi_key);
 	if (conn_list == NULL || parentfd == -1) {	/* Create a new connection set */
 		int num_svrs;
@@ -426,6 +429,9 @@ dealloc_conn_list_single(int parentfd)
 	svr_conns_list_t *iter_conns;
 	svr_conns_list_t *conn_list;
 	svr_conns_list_t *prev = NULL;
+
+	if (psi_key == 0)
+		return;
 
 	conn_list = pthread_getspecific(psi_key);
 	for (iter_conns = conn_list; iter_conns != NULL; prev = iter_conns, iter_conns = iter_conns->next) {
