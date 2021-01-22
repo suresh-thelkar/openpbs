@@ -1511,7 +1511,7 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 	int error = 0;
 	node_partition **nodepart = NULL;
 	node_info **ninfo_arr = NULL;
-	node_partition *msvr_pset[3];
+	node_partition *msvr_pset[sinfo->svr_to_psets.size() + 2];	/* +1 for NULL, +1 for sinfo->allpart */
 
 	if (!sc_attrs.do_not_span_psets)
 		flags |= SPAN_PSETS;
@@ -1571,26 +1571,44 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 			if (qinfo->has_nodes)
 				ninfo_arr = qinfo->nodes;
 			else if (!(sinfo->svr_to_psets.empty())) {	/* Multi-server psets */
+				int i = 0;
+				int owner_set = -1;
+
 				/* Find the pset of the server which owns the job */
 				for (auto &spset: sinfo->svr_to_psets) {
 					if (spset.svr_inst_id == resresv->job->svr_inst_id) {
 						msvr_pset[0] = spset.np;
-						if (!resresv->job->is_array && spec->total_chunks == 1) {
-							/* Allow job to be placed on nodes of other servers as well
-							 * For now, restricting job arrays and multi-chunk jobs
-							 * to nodes of just the local server
-							 */
-							msvr_pset[1] = sinfo->allpart;
-							msvr_pset[2] = NULL;
-						} else {
-							/* This prevents eval_selspec from considering all unassociated nodes */
-							flags &= ~SPAN_PSETS;
-							msvr_pset[1] = NULL;
-						}
-						nodepart = msvr_pset;
+						owner_set = i;
 						break;
 					}
+					i++;
 				}
+				if (owner_set != -1) {
+					if (resresv->job->is_array)	/* Restrict job arrays to owner server */
+						msvr_pset[1] = NULL;
+					else if (spec->total_chunks == 1) {	/* Single chunk jobs */
+						msvr_pset[1] = sinfo->allpart;	/* If owner's nodes don't work, use all */
+						msvr_pset[2] = NULL;
+					} else {	/* Potential multi-node jobs */
+						/* If owner nodes don't work, try to first fit fully on a one server */
+						i = 0;
+						int j = 1;	/* index of msvr_pset */
+						for (auto &spset: sinfo->svr_to_psets) {
+							if (i != owner_set)
+								msvr_pset[j++] = spset.np;
+							i++;
+						}
+						if (resresv->is_resv) {
+							/* For reservations, we won't try to span across servers */
+							msvr_pset[j] = NULL;
+						} else {
+							/* If the job can't fit completely on any single server, then span as last resort */
+							msvr_pset[j++] = sinfo->allpart;
+							msvr_pset[j] = NULL;
+						}
+					}
+				}
+				nodepart = msvr_pset;
 			}
 		}
 	}
