@@ -70,6 +70,8 @@ __pbs_submit_resv(int c, struct attropl *attrib, char *extend)
 	struct attropl *pal;
 	int rc;
 	char *ret;
+	svr_conn_t **svr_conns = get_conn_svr_instances(c);
+	c = random_srv_conn(svr_conns);
 
 	for (pal = attrib; pal; pal = pal->next)
 		pal->op = SET;		/* force operator to SET */

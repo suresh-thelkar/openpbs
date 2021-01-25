@@ -516,6 +516,13 @@ PBSD_status_aggregate(int c, int cmd, char *id, void *attrib, char *extend, int 
 			start = 0;
 		else
 			single_itr = 1;
+	} else if (parent_object == MGR_OBJ_RESV) {
+		/* we should skip the first char which specifies the type of reservation */
+		if (id == NULL || ((start = get_job_location_hint(id + 1)) == -1))
+			start = 0;
+		else
+			single_itr = 1;
+			
 	}
 
 	if (pbs_client_thread_lock_connection(c) != 0)
@@ -571,6 +578,11 @@ PBSD_status_aggregate(int c, int cmd, char *id, void *attrib, char *extend, int 
 					cur->next = next;
 					cur = last;
 				}
+			}
+		} else {
+			if (!single_itr && (pbs_errno == PBSE_UNKQUE || pbs_errno == PBSE_UNKRESVID)) {
+				pbs_errno = 0;
+				continue;
 			}
 		}
 
