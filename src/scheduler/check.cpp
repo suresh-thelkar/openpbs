@@ -1570,46 +1570,47 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 			/* if there are nodes assigned to the queue, then check those */
 			if (qinfo->has_nodes)
 				ninfo_arr = qinfo->nodes;
-			else if (!(sinfo->svr_to_psets.empty())) {	/* Multi-server psets */
-				int i = 0;
-				int owner_set = -1;
+		}
 
-				/* Find the pset of the server which owns the job */
-				for (auto &spset: sinfo->svr_to_psets) {
-					if (spset.svr_inst_id == resresv->job->svr_inst_id) {
-						msvr_pset[0] = spset.np;
-						owner_set = i;
-						break;
-					}
-					i++;
+		if (!(sinfo->svr_to_psets.empty())) { /* Multi-server psets */
+			int i = 0;
+			int owner_set = -1;
+
+			/* Find the pset of the server which owns the job */
+			for (auto &spset : sinfo->svr_to_psets) {
+				if (spset.svr_inst_id == resresv->svr_inst_id) {
+					msvr_pset[0] = spset.np;
+					owner_set = i;
+					break;
 				}
-				if (owner_set != -1) {
-					if (resresv->job->is_array)	/* Restrict job arrays to owner server */
-						msvr_pset[1] = NULL;
-					else if (spec->total_chunks == 1) {	/* Single chunk jobs */
-						msvr_pset[1] = sinfo->allpart;	/* If owner's nodes don't work, use all */
-						msvr_pset[2] = NULL;
-					} else {	/* Potential multi-node jobs */
-						/* If owner nodes don't work, try to first fit fully on a one server */
-						i = 0;
-						int j = 1;	/* index of msvr_pset */
-						for (auto &spset: sinfo->svr_to_psets) {
-							if (i != owner_set)
-								msvr_pset[j++] = spset.np;
-							i++;
-						}
-						if (resresv->is_resv) {
-							/* For reservations, we won't try to span across servers */
-							msvr_pset[j] = NULL;
-						} else {
-							/* If the job can't fit completely on any single server, then span as last resort */
-							msvr_pset[j++] = sinfo->allpart;
-							msvr_pset[j] = NULL;
-						}
-					}
-				}
-				nodepart = msvr_pset;
+				i++;
 			}
+			if (owner_set != -1) {
+				if (resresv->job->is_array) /* Restrict job arrays to owner server */
+					msvr_pset[1] = NULL;
+				else if (spec->total_chunks == 1) {    /* Single chunk jobs */
+					msvr_pset[1] = sinfo->allpart; /* If owner's nodes don't work, use all */
+					msvr_pset[2] = NULL;
+				} else { /* Potential multi-node jobs */
+					/* If owner nodes don't work, try to first fit fully on a one server */
+					i = 0;
+					int j = 1; /* index of msvr_pset */
+					for (auto &spset : sinfo->svr_to_psets) {
+						if (i != owner_set)
+							msvr_pset[j++] = spset.np;
+						i++;
+					}
+					if (resresv->is_resv) {
+						/* For reservations, we won't try to span across servers */
+						msvr_pset[j] = NULL;
+					} else {
+						/* If the job can't fit completely on any single server, then span as last resort */
+						msvr_pset[j++] = sinfo->allpart;
+						msvr_pset[j] = NULL;
+					}
+				}
+			}
+			nodepart = msvr_pset;
 		}
 	}
 

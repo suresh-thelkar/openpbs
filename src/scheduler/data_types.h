@@ -575,7 +575,6 @@ struct job_info
 	unsigned topjob_ineligible:1;	/* Job is ineligible to be a top job */
 
 	char *job_name;			/* job name attribute (qsub -N) */
-	char *svr_inst_id;
 	char *comment;			/* comment field of job */
 	char *resv_id;			/* identifier of reservation job is in */
 	char *alt_id;			/* vendor assigned job identifier */
@@ -824,6 +823,7 @@ struct resource_resv
 	job_info *job;			/* pointer to job specific structure */
 	resv_info *resv;		/* pointer to reservation specific structure */
 
+	char *svr_inst_id;	/* Server instance id of the job/reservation */
 	char *aoename;			   /* store name of aoe if requested */
 	char *eoename;			   /* store name of eoe if requested */
 	char **node_set_str;		   /* user specified node string */

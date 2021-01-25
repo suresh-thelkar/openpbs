@@ -1135,7 +1135,7 @@ check_node_buckets(status *policy, server_info *sinfo, queue_info *qinfo, resour
 	} else if (!(sinfo->svr_to_psets.empty())) {
 		/* Find buckets associated with nodes of the server which owns the job */
 		for (auto &spset: sinfo->svr_to_psets) {
-			if (spset.svr_inst_id == resresv->job->svr_inst_id) {
+			if (spset.svr_inst_id == resresv->svr_inst_id) {
 				nspec **nspecs;
 
 				nspecs = map_buckets(policy, spset.np->bkts, resresv, err);
