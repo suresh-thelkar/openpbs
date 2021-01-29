@@ -1586,13 +1586,14 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 				i++;
 			}
 			if (owner_set != -1) {
-				if (resresv->job->is_array) /* Restrict job arrays to owner server */
+				/* Restrict job arrays and reservations to owner server */
+				if (resresv->job->is_array || resresv->is_resv)
 					msvr_pset[1] = NULL;
 				else if (spec->total_chunks == 1) {    /* Single chunk jobs */
 					msvr_pset[1] = sinfo->allpart; /* If owner's nodes don't work, use all */
 					msvr_pset[2] = NULL;
-				} else { /* Potential multi-node jobs */
-					/* If owner nodes don't work, try to first fit fully on a one server */
+				} else { /* Multi-node jobs */
+					/* If owner nodes don't work, try to first fit fully on any one server */
 					i = 0;
 					int j = 1; /* index of msvr_pset */
 					for (auto &spset : sinfo->svr_to_psets) {
@@ -1600,14 +1601,9 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 							msvr_pset[j++] = spset.np;
 						i++;
 					}
-					if (resresv->is_resv) {
-						/* For reservations, we won't try to span across servers */
-						msvr_pset[j] = NULL;
-					} else {
-						/* If the job can't fit completely on any single server, then span as last resort */
-						msvr_pset[j++] = sinfo->allpart;
-						msvr_pset[j] = NULL;
-					}
+					/* If the job can't fit completely on any single server, then span as last resort */
+					msvr_pset[j++] = sinfo->allpart;
+					msvr_pset[j] = NULL;
 				}
 			}
 			nodepart = msvr_pset;
