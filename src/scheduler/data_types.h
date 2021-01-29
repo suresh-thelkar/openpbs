@@ -823,7 +823,7 @@ struct resource_resv
 	job_info *job;			/* pointer to job specific structure */
 	resv_info *resv;		/* pointer to reservation specific structure */
 
-	char *svr_inst_id;	/* Server instance id of the job/reservation */
+	char *svr_inst_id;		/* Server instance id of the job/reservation */
 	char *aoename;			   /* store name of aoe if requested */
 	char *eoename;			   /* store name of eoe if requested */
 	char **node_set_str;		   /* user specified node string */
