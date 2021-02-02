@@ -1511,7 +1511,7 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 	int error = 0;
 	node_partition **nodepart = NULL;
 	node_info **ninfo_arr = NULL;
-	node_partition *msvr_pset[sinfo->svr_to_psets.size() + 2];	/* +1 for NULL, +1 for sinfo->allpart */
+	node_partition *msvr_pset[3];
 
 	if (!sc_attrs.do_not_span_psets)
 		flags |= SPAN_PSETS;
@@ -1587,23 +1587,11 @@ check_normal_node_path(status *policy, server_info *sinfo, queue_info *qinfo, re
 			}
 			if (owner_set != -1) {
 				/* Restrict job arrays and reservations to owner server */
-				if (resresv->job->is_array || resresv->is_resv)
+				if (resresv->is_resv || resresv->job->is_array)
 					msvr_pset[1] = NULL;
-				else if (spec->total_chunks == 1) {    /* Single chunk jobs */
-					msvr_pset[1] = sinfo->allpart; /* If owner's nodes don't work, use all */
+				else {	/* If owner's nodes don't work, use all */
+					msvr_pset[1] = sinfo->allpart;
 					msvr_pset[2] = NULL;
-				} else { /* Multi-node jobs */
-					/* If owner nodes don't work, try to first fit fully on any one server */
-					i = 0;
-					int j = 1; /* index of msvr_pset */
-					for (auto &spset : sinfo->svr_to_psets) {
-						if (i != owner_set)
-							msvr_pset[j++] = spset.np;
-						i++;
-					}
-					/* If the job can't fit completely on any single server, then span as last resort */
-					msvr_pset[j++] = sinfo->allpart;
-					msvr_pset[j] = NULL;
 				}
 			}
 			nodepart = msvr_pset;
